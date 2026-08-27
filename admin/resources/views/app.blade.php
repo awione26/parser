@@ -67,7 +67,7 @@
         <div class="sidebar">
             <div class="user-panel mt-3 pb-3 mb-3">
                 <div class="info d-block pl-1">
-                    <span class="d-block text-white">{{ Auth::user()->name }}</span>
+                    <span class="d-block text-white">{{ Auth::user()->login }}</span>
                     <small class="text-muted">{{ Auth::user()->roleLabel() }}</small>
                 </div>
             </div>

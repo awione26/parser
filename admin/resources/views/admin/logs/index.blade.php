@@ -7,6 +7,60 @@
     <link rel="stylesheet" href="{{ asset('plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
     <style>
         #parser-logs td.log-error { max-width: 560px; overflow-wrap: anywhere; white-space: normal; }
+
+        .log-filter-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem 1.5rem;
+            align-items: end;
+        }
+
+        .log-filter-grid .form-group {
+            min-width: 0;
+            margin-bottom: 0;
+        }
+
+        .log-filter-actions {
+            display: flex;
+            grid-column: 1 / -1;
+            gap: .5rem;
+            justify-content: flex-end;
+        }
+
+        .log-filter-actions .btn {
+            min-width: 120px;
+            white-space: nowrap;
+        }
+
+        @media (min-width: 1500px) {
+            .log-filter-grid {
+                grid-template-columns:
+                    minmax(180px, 1fr)
+                    minmax(220px, 1.2fr)
+                    minmax(165px, .8fr)
+                    minmax(165px, .8fr)
+                    max-content;
+            }
+
+            .log-filter-actions {
+                grid-column: auto;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .log-filter-grid {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .log-filter-actions {
+                grid-column: auto;
+            }
+
+            .log-filter-actions .btn {
+                flex: 1 1 0;
+                min-width: 0;
+            }
+        }
     </style>
 @endsection
 
@@ -22,8 +76,8 @@
             </div>
             <div class="card-body">
                 <form id="log-filters" autocomplete="off">
-                    <div class="row align-items-end">
-                        <div class="col-lg-3 col-md-6 form-group">
+                    <div class="log-filter-grid">
+                        <div class="form-group">
                             <label class="filter-label" for="filter-result">Результат</label>
                             <select id="filter-result" class="custom-select">
                                 <option value="">Все результаты</option>
@@ -32,20 +86,20 @@
                                 <option value="running">Выполняется</option>
                             </select>
                         </div>
-                        <div class="col-lg-3 col-md-6 form-group">
+                        <div class="form-group">
                             <label class="filter-label" for="filter-resource">Ресурс</label>
                             <input id="filter-resource" class="form-control" type="text" maxlength="255" placeholder="uslugi.yandex.ru">
                         </div>
-                        <div class="col-lg-2 col-md-4 form-group">
+                        <div class="form-group">
                             <label class="filter-label" for="filter-started-from">Запущен с</label>
                             <input id="filter-started-from" class="form-control" type="date">
                         </div>
-                        <div class="col-lg-2 col-md-4 form-group">
-                            <label class="filter-label" for="filter-started-to">по</label>
+                        <div class="form-group">
+                            <label class="filter-label" for="filter-started-to">Запущен по</label>
                             <input id="filter-started-to" class="form-control" type="date">
                         </div>
-                        <div class="col-lg-2 col-md-4 form-group">
-                            <button type="submit" class="btn btn-primary mr-2"><i class="fas fa-search mr-1" aria-hidden="true"></i>Применить</button>
+                        <div class="log-filter-actions">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-search mr-1" aria-hidden="true"></i>Применить</button>
                             <button id="reset-log-filters" type="button" class="btn btn-outline-secondary">Сбросить</button>
                         </div>
                     </div>

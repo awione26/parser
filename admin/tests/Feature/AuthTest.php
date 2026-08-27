@@ -45,6 +45,23 @@ class AuthTest extends TestCase
         $this->assertNotSame($oldSessionId, session()->getId());
     }
 
+    public function test_authenticated_layout_displays_login_and_company_footer(): void
+    {
+        $user = User::query()->create([
+            'name' => 'Главный администратор',
+            'login' => 'admin',
+            'role' => User::ROLE_ADMIN,
+            'password' => Hash::make(self::PASSWORD),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('admin.dashboard.index'))
+            ->assertOk()
+            ->assertSee('<span class="d-block text-white">admin</span>', false)
+            ->assertDontSee('Главный администратор')
+            ->assertSee('Реестр мастеров &copy; '.date('Y').' Awi One', false);
+    }
+
     public function test_invalid_credentials_are_rate_limited_by_normalized_login_and_ip(): void
     {
         $key = 'administrator|127.0.0.1';
