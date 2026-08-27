@@ -1,0 +1,301 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: uslugi
+      MYSQL_USER: uslugi_migrator
+      MYSQL_PASSWORD: ${MYSQL_MIGRATOR_PASSWORD:?set MYSQL_MIGRATOR_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      TZ: UTC
+    ports:
+      - "127.0.0.1:3306:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  parser-migrate:
+    image: uslugi-yandex-parser:local
+    build:
+      context: .
+      dockerfile: docker/parser/Dockerfile
+      target: runtime
+    read_only: true
+    restart: "no"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: uslugi
+      MYSQL_USER: uslugi_migrator
+      MYSQL_PASSWORD: ${MYSQL_MIGRATOR_PASSWORD:?set MYSQL_MIGRATOR_PASSWORD in .env}
+      # One-time compatibility secret for upgrading legacy Fernet rows.
+      # Leave empty on fresh installs and remove it after a successful upgrade.
+      LEGACY_PHONE_ENCRYPTION_KEY: ${LEGACY_PHONE_ENCRYPTION_KEY:-}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  admin-migrate:
+    image: uslugi-yandex-admin:local
+    build:
+      context: ./admin
+      dockerfile: docker/php/Dockerfile
+    read_only: true
+    restart: "no"
+    environment:
+      APP_NAME: "Парсер мастеров"
+      APP_ENV: production
+      APP_KEY: ${ADMIN_APP_KEY:-}
+      APP_DEBUG: "false"
+      APP_TIMEZONE: Europe/Moscow
+      APP_LOCALE: ru
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: uslugi
+      DB_USERNAME: uslugi_migrator
+      DB_PASSWORD: ${MYSQL_MIGRATOR_PASSWORD:?set MYSQL_MIGRATOR_PASSWORD in .env}
+      PARSER_DB_CONNECTION: parser
+      PARSER_DB_HOST: mysql
+      PARSER_DB_PORT: 3306
+      PARSER_DB_DATABASE: uslugi
+      PARSER_DB_USERNAME: uslugi_migrator
+      PARSER_DB_PASSWORD: ${MYSQL_MIGRATOR_PASSWORD:?set MYSQL_MIGRATOR_PASSWORD in .env}
+      SESSION_DRIVER: file
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+    depends_on:
+      parser-migrate:
+        condition: service_completed_successfully
+    entrypoint: ["php", "artisan"]
+    command: ["migrate", "--force", "--no-interaction"]
+    volumes:
+      - admin_storage:/var/www/html/storage
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  db-grants:
+    image: uslugi-yandex-db-grants:local
+    build:
+      context: .
+      dockerfile: docker/mysql/Dockerfile
+    read_only: true
+    restart: "no"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: uslugi
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_PARSER_PASSWORD: ${MYSQL_PARSER_PASSWORD:?set MYSQL_PARSER_PASSWORD in .env}
+      MYSQL_ADMIN_PASSWORD: ${MYSQL_ADMIN_PASSWORD:?set MYSQL_ADMIN_PASSWORD in .env}
+    depends_on:
+      admin-migrate:
+        condition: service_completed_successfully
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  parser:
+    image: uslugi-yandex-parser:local
+    profiles: ["parser"]
+    build:
+      context: .
+      dockerfile: docker/parser/Dockerfile
+      target: runtime
+    read_only: true
+    restart: "no"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: uslugi
+      MYSQL_USER: uslugi_parser
+      MYSQL_PASSWORD: ${MYSQL_PARSER_PASSWORD:?set MYSQL_PARSER_PASSWORD in .env}
+      YANDEX_OPERATOR_PERMISSION: ${YANDEX_OPERATOR_PERMISSION:-false}
+      YANDEX_PHONE_PERMISSION: ${YANDEX_PHONE_PERMISSION:-false}
+      SCRAPER_USER_AGENT: ${SCRAPER_USER_AGENT:-CompanyName-UslugiParser/0.1 (+mailto:parser-owner@example.com)}
+      SCRAPER_GEO: ${SCRAPER_GEO:-213-moscow}
+      SCRAPER_RESPECT_ROBOTS: ${SCRAPER_RESPECT_ROBOTS:-true}
+      SCRAPER_MIN_DELAY_SECONDS: ${SCRAPER_MIN_DELAY_SECONDS:-2.0}
+      SCRAPER_MAX_DELAY_SECONDS: ${SCRAPER_MAX_DELAY_SECONDS:-5.0}
+      SCRAPER_TIMEOUT_SECONDS: ${SCRAPER_TIMEOUT_SECONDS:-30.0}
+      SCRAPER_MAX_RETRIES: ${SCRAPER_MAX_RETRIES:-3}
+      SCRAPER_COLLECT_PHONE: "false"
+      SCRAPER_PHONE_HEADLESS: ${SCRAPER_PHONE_HEADLESS:-true}
+      SCRAPER_PHONE_TIMEOUT_SECONDS: ${SCRAPER_PHONE_TIMEOUT_SECONDS:-15.0}
+      SCRAPER_INCLUDE_ORGANIZATIONS: ${SCRAPER_INCLUDE_ORGANIZATIONS:-false}
+    depends_on:
+      db-grants:
+        condition: service_completed_successfully
+    command: ["categories"]
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  parser-phone:
+    image: uslugi-yandex-parser-phone:local
+    profiles: ["phone"]
+    build:
+      context: .
+      dockerfile: docker/parser/Dockerfile
+      target: runtime-phone
+    read_only: true
+    restart: "no"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: uslugi
+      MYSQL_USER: uslugi_parser
+      MYSQL_PASSWORD: ${MYSQL_PARSER_PASSWORD:?set MYSQL_PARSER_PASSWORD in .env}
+      YANDEX_OPERATOR_PERMISSION: ${YANDEX_OPERATOR_PERMISSION:-false}
+      YANDEX_PHONE_PERMISSION: ${YANDEX_PHONE_PERMISSION:-false}
+      SCRAPER_USER_AGENT: ${SCRAPER_USER_AGENT:-CompanyName-UslugiParser/0.1 (+mailto:parser-owner@example.com)}
+      SCRAPER_GEO: ${SCRAPER_GEO:-213-moscow}
+      SCRAPER_RESPECT_ROBOTS: ${SCRAPER_RESPECT_ROBOTS:-true}
+      SCRAPER_MIN_DELAY_SECONDS: ${SCRAPER_MIN_DELAY_SECONDS:-2.0}
+      SCRAPER_MAX_DELAY_SECONDS: ${SCRAPER_MAX_DELAY_SECONDS:-5.0}
+      SCRAPER_TIMEOUT_SECONDS: ${SCRAPER_TIMEOUT_SECONDS:-30.0}
+      SCRAPER_MAX_RETRIES: ${SCRAPER_MAX_RETRIES:-3}
+      SCRAPER_COLLECT_PHONE: ${SCRAPER_COLLECT_PHONE:-false}
+      SCRAPER_PHONE_HEADLESS: ${SCRAPER_PHONE_HEADLESS:-true}
+      SCRAPER_PHONE_TIMEOUT_SECONDS: ${SCRAPER_PHONE_TIMEOUT_SECONDS:-15.0}
+      SCRAPER_INCLUDE_ORGANIZATIONS: ${SCRAPER_INCLUDE_ORGANIZATIONS:-false}
+    depends_on:
+      db-grants:
+        condition: service_completed_successfully
+    command: ["categories"]
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+      - /home/parser:size=64m,mode=0700,uid=10001,gid=10001
+    shm_size: "512mb"
+    cap_drop:
+      - ALL
+    # Required only so the seccomp profile admits chroot inside Chromium's
+    # unprivileged user namespace; NoNewPrivs keeps CapEff at zero.
+    cap_add:
+      - SYS_CHROOT
+    security_opt:
+      - no-new-privileges:true
+      # Official Playwright v1.62.0 profile, vendored byte-for-byte.
+      # SHA-256: cc3e61cabda6bbc1e53e54d27ba4d55a9d3be829b6dd1a596f4a7b31b1cc7849
+      - seccomp=./docker/parser/seccomp_profile.json
+    stop_grace_period: 45s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  admin:
+    image: uslugi-yandex-admin:local
+    build:
+      context: ./admin
+      dockerfile: docker/php/Dockerfile
+    restart: unless-stopped
+    read_only: true
+    environment:
+      APP_NAME: "Парсер мастеров"
+      APP_ENV: production
+      APP_KEY: ${ADMIN_APP_KEY:-}
+      APP_DEBUG: "false"
+      APP_URL: ${ADMIN_APP_URL:-http://127.0.0.1:8080}
+      APP_TIMEZONE: Europe/Moscow
+      APP_LOCALE: ru
+      LOG_LEVEL: info
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: uslugi
+      DB_USERNAME: uslugi_admin
+      DB_PASSWORD: ${MYSQL_ADMIN_PASSWORD:?set MYSQL_ADMIN_PASSWORD in .env}
+      PARSER_DB_CONNECTION: parser
+      PARSER_DB_HOST: mysql
+      PARSER_DB_PORT: 3306
+      PARSER_DB_DATABASE: uslugi
+      PARSER_DB_USERNAME: uslugi_admin
+      PARSER_DB_PASSWORD: ${MYSQL_ADMIN_PASSWORD:?set MYSQL_ADMIN_PASSWORD in .env}
+      ADMIN_INITIAL_LOGIN: ${ADMIN_INITIAL_LOGIN:-}
+      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-}
+      ADMIN_INITIAL_NAME: ${ADMIN_INITIAL_NAME:-Главный администратор}
+      ADMIN_ALLOW_WEAK_INITIAL_PASSWORD: ${ADMIN_ALLOW_WEAK_INITIAL_PASSWORD:-false}
+      SESSION_DRIVER: database
+      SESSION_ENCRYPT: "true"
+      SESSION_SECURE_COOKIE: ${ADMIN_SESSION_SECURE_COOKIE:-false}
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+    depends_on:
+      db-grants:
+        condition: service_completed_successfully
+    volumes:
+      - admin_storage:/var/www/html/storage
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/admin-ready && php-fpm -t"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  admin-web:
+    image: uslugi-yandex-admin-web:local
+    build:
+      context: ./admin
+      dockerfile: docker/nginx/Dockerfile
+    restart: unless-stopped
+    read_only: true
+    ports:
+      - "127.0.0.1:${ADMIN_HOST_PORT:-8080}:8080"
+    depends_on:
+      admin:
+        condition: service_healthy
+    tmpfs:
+      - /var/cache/nginx:size=32m,mode=0755,uid=101,gid=101
+      - /var/run:size=8m,mode=0755,uid=101,gid=101
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  mysql_data:
+  admin_storage:
