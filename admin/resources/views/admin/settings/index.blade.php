@@ -437,8 +437,6 @@
                             <div class="settings-phone-note">
                                 <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
                                 <div>
-                                    Для получения телефонов используйте контейнер <code>parser-phone</code>
-                                    и работайте только в пределах письменного разрешения Яндекса.
                                     При <code>SCRAPER_RESPECT_ROBOTS=true</code> раскрытие телефона блокируется;
                                     отключайте эту защиту, только если это прямо предусмотрено разрешением.
                                     Значение <code>SCRAPER_PHONE_HEADLESS=false</code> не работает в Docker без
