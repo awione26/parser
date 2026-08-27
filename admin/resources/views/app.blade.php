@@ -94,6 +94,12 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a href="{{ route('admin.settings.index') }}" class="nav-link{{ Request::is('cp/settings*') ? ' active' : '' }}">
+                                <i class="nav-icon fas fa-cogs" aria-hidden="true"></i>
+                                <p>Настройки</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a href="{{ route('admin.admin.index') }}" class="nav-link{{ Request::is('cp/administrators*') ? ' active' : '' }}">
                                 <i class="nav-icon fas fa-user-shield" aria-hidden="true"></i>
                                 <p>Администраторы</p>
@@ -125,7 +131,7 @@
     </div>
 
     <footer class="main-footer">
-        <strong>Реестр мастеров &copy; {{ date('Y') }}</strong>
+        <strong>Реестр мастеров &copy; {{ date('Y') }} Awi One</strong>
         <span class="float-right d-none d-sm-inline text-muted">Удаление и экспорт доступны администраторам</span>
     </footer>
 </div>

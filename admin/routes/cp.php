@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\PhoneController;
 use App\Http\Controllers\Admin\ProfessionalController;
 use App\Http\Controllers\Admin\ProfessionalDeletionController;
 use App\Http\Controllers\Admin\ProfessionalExportController;
+use App\Http\Controllers\Admin\ParserSettingController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -26,6 +27,10 @@ Route::middleware('auth')->group(function (): void {
             ->name('admin.logs.index');
         Route::get('datatable/logs', [DataTableController::class, 'logs'])
             ->name('admin.datatable.logs');
+        Route::get('settings', [ParserSettingController::class, 'index'])
+            ->name('admin.settings.index');
+        Route::put('settings', [ParserSettingController::class, 'update'])
+            ->name('admin.settings.update');
     });
 
     Route::get('professionals', [ProfessionalController::class, 'index'])
