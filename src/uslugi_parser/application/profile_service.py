@@ -30,17 +30,14 @@ MANUAL_CATEGORY = CategoryDefinition("manual", "Ручной импорт", ())
 
 
 def apply_profile_policy(profile: ParsedProfessional, settings: Settings) -> ParsedProfessional:
-    """Применить единые правила типа аккаунта и обработки телефона.
+    """Применить единое правило допустимого типа аккаунта.
 
     Проверка используется для локальных и сетевых страниц, чтобы ни один путь
-    импорта не обходил ограничения конфигурации.
+    импорта не обходил ограничение конфигурации для организаций.
     """
 
     if not settings.include_organizations and profile.account_type != "person":
         raise ParseError("profile is not explicitly marked as a person")
-    if profile.phone and not settings.phone_permission:
-        profile.phone = None
-        profile.phone_status = "permission_required"
     return profile
 
 
@@ -49,10 +46,9 @@ def parse_saved_profile(
     source_url: str,
     settings: Settings,
 ) -> ParsedProfessional:
-    """Разобрать сохранённую страницу и применить правила аккаунта и телефона.
+    """Разобрать сохранённую страницу и применить правило типа аккаунта.
 
-    Разрешение оператора и robots.txt здесь не проверяются, поскольку сетевой
-    запрос не выполняется.
+    Политика robots.txt здесь не проверяется, поскольку сетевой запрос не выполняется.
     """
 
     return apply_profile_policy(parse_profile_html(html, source_url), settings)
@@ -96,19 +92,18 @@ async def parse_live_profile(
 ) -> ParsedProfessional:
     """Загрузить, проверить и разобрать одну публичную карточку мастера.
 
-    При явном разрешении сценарий также может получить номер через браузерный
-    интерфейс сайта, сохраняя блокировки CAPTCHA и навигации как безопасный отказ.
+    При включённой настройке сценарий также может получить номер через браузерный
+    интерфейс сайта, сохраняя политики robots.txt, CAPTCHA и безопасной навигации.
     """
 
     options = ProfileOptions(collect_phone=collect_phone)
-    settings.require_live_permission()
     profile_url = canonicalize_live_profile_url(profile_url)
     async with AsyncExitStack() as stack:
         fetcher = await stack.enter_async_context(fetcher_factory(settings))
         result = await fetcher.get(profile_url)
         profile = apply_profile_policy(parse_profile_html(result.text, result.url), settings)
         if options.collect_phone and not profile.phone:
-            settings.require_phone_reveal_permission()
+            settings.require_phone_reveal_policy()
             if phone_collector_factory is None:
                 raise ConfigurationError("phone collector is not configured")
             collector = await stack.enter_async_context(phone_collector_factory(settings))

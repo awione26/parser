@@ -68,7 +68,7 @@ def _fetcher(settings: Settings) -> HttpFetcher:
 
 
 def _phone_collector(settings: Settings) -> PhoneCollector:
-    """Создать браузерный сборщик для разрешённого раскрытия телефона."""
+    """Создать браузерный сборщик для публичного раскрытия телефона."""
 
     return PhoneCollector(
         user_agent=settings.user_agent,

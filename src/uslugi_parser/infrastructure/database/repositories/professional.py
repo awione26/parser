@@ -133,8 +133,8 @@ class ProfessionalRepository:
                 if normalized_phone:
                     professional.phone = normalized_phone
                     professional.phone_status = profile.phone_status
-                elif profile.phone_status in {"not_public", "permission_required"}:
-                    # Учитываем явное удаление номера источником или отзыв локального разрешения.
+                elif profile.phone_status == "not_public":
+                    # Учитываем явное удаление публичного номера самим источником.
                     professional.phone = None
                     professional.phone_status = profile.phone_status
                 outcome = "updated"

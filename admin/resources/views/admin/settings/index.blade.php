@@ -214,8 +214,8 @@
         <div class="alert alert-info settings-notice" role="status">
             <i class="fas fa-info-circle mr-2" aria-hidden="true"></i>
             <div>
-                Изменения применятся при следующем запуске парсера. Разрешения оператора
-                <code>YANDEX_*</code> здесь не изменяются.
+                Изменения применятся при следующем запуске парсера. Письменное разрешение
+                на сбор контактных данных оформляется отдельно и не является настройкой парсера.
             </div>
         </div>
 
@@ -437,11 +437,10 @@
                             <div class="settings-phone-note">
                                 <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
                                 <div>
-                                    Получение телефонов требует контейнера <code>parser-phone</code>, включённых
-                                    <code>YANDEX_OPERATOR_PERMISSION</code> и <code>YANDEX_PHONE_PERMISSION</code>,
-                                    а также явно разрешённого оператором режима работы с <code>robots.txt</code>.
+                                    Для получения телефонов используйте контейнер <code>parser-phone</code>
+                                    и работайте только в пределах письменного разрешения Яндекса.
                                     При <code>SCRAPER_RESPECT_ROBOTS=true</code> раскрытие телефона блокируется;
-                                    отключайте эту защиту только в пределах письменного разрешения.
+                                    отключайте эту защиту, только если это прямо предусмотрено разрешением.
                                     Значение <code>SCRAPER_PHONE_HEADLESS=false</code> не работает в Docker без
                                     настроенного графического <code>DISPLAY</code>.
                                 </div>

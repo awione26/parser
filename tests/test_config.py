@@ -15,8 +15,6 @@ def settings() -> Settings:
         database_url="sqlite+pysqlite:///:memory:",
         user_agent="TestParser/1.0",
         geo="213-moscow",
-        operator_permission=False,
-        phone_permission=False,
         respect_robots=True,
         min_delay_seconds=0,
         max_delay_seconds=0,
@@ -29,24 +27,29 @@ def settings() -> Settings:
     )
 
 
-def test_live_and_phone_permission_gates() -> None:
+def test_phone_reveal_policy_only_blocks_robots_policy() -> None:
+    """Не требовать env-флаги разрешений, но сохранять предохранитель robots.txt."""
+
     base = settings()
-    with pytest.raises(ConfigurationError, match="Live collection is disabled"):
-        base.require_live_permission()
-
-    live = replace(base, operator_permission=True)
-    live.require_live_permission()
-    with pytest.raises(ConfigurationError, match="Phone collection is disabled"):
-        live.require_phone_reveal_permission()
-
-    phone_allowed = replace(
-        live,
-        phone_permission=True,
-    )
     with pytest.raises(ConfigurationError, match="robots.txt"):
-        phone_allowed.require_phone_reveal_permission()
+        base.require_phone_reveal_policy()
 
-    replace(phone_allowed, respect_robots=False).require_phone_reveal_permission()
+    replace(base, respect_robots=False).require_phone_reveal_policy()
+
+
+def test_yandex_permission_environment_flags_are_not_runtime_requirements(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Игнорировать прежние YANDEX_PERMISSION-флаги при загрузке конфигурации."""
+
+    monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///:memory:")
+    monkeypatch.setenv("YANDEX_OPERATOR_PERMISSION", "not-a-boolean")
+    monkeypatch.setenv("YANDEX_PHONE_PERMISSION", "not-a-boolean")
+    monkeypatch.setenv("SCRAPER_RESPECT_ROBOTS", "false")
+
+    loaded = Settings.from_env()
+
+    loaded.require_phone_reveal_policy()
 
 
 @pytest.mark.parametrize(
@@ -130,8 +133,6 @@ def test_database_values_override_all_scraper_environment_fields() -> None:
     assert updated.phone_headless is False
     assert updated.phone_timeout_seconds == 11.5
     assert updated.include_organizations is True
-    assert updated.operator_permission is False
-    assert updated.phone_permission is False
 
 
 def test_missing_database_values_keep_environment_fallback() -> None:

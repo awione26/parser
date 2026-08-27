@@ -69,15 +69,6 @@ def _parse_bool(name: str, value: str) -> bool:
     raise ConfigurationError(f"{name} must be true or false, got {value!r}")
 
 
-def _env_bool(name: str, default: bool) -> bool:
-    """Читает булеву переменную, использует default при её отсутствии и отклоняет иное."""
-
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return _parse_bool(name, value)
-
-
 def _parse_float(name: str, value: str) -> float:
     """Преобразовать строковую настройку в число и дать понятную ошибку формата."""
 
@@ -128,7 +119,7 @@ def bootstrap_database_url_from_env() -> str:
 
 @dataclass(frozen=True, slots=True)
 class Settings:
-    """Хранит настройки парсера и явные предохранители живого сбора.
+    """Хранит настройки парсера и сетевые предохранители сбора данных.
 
     Фабрики :meth:`from_env`, :meth:`from_database_values` и :meth:`with_overrides`
     возвращают уже проверенные экземпляры; при прямом создании проверку нужно
@@ -138,8 +129,6 @@ class Settings:
     database_url: str
     user_agent: str
     geo: str
-    operator_permission: bool
-    phone_permission: bool
     respect_robots: bool
     min_delay_seconds: float
     max_delay_seconds: float
@@ -157,15 +146,13 @@ class Settings:
         database_url: str,
         scraper_values: Mapping[str, str],
     ) -> Settings:
-        """Собрать экземпляр из DSN, env-разрешений и выбранного источника SCRAPER-значений."""
+        """Собрать экземпляр из DSN и выбранного источника SCRAPER-значений."""
 
         parsed = _parse_scraper_values(scraper_values)
         settings = cls(
             database_url=database_url,
             user_agent=str(parsed["user_agent"]),
             geo=str(parsed["geo"]),
-            operator_permission=_env_bool("YANDEX_OPERATOR_PERMISSION", False),
-            phone_permission=_env_bool("YANDEX_PHONE_PERMISSION", False),
             respect_robots=bool(parsed["respect_robots"]),
             min_delay_seconds=float(parsed["min_delay_seconds"]),
             max_delay_seconds=float(parsed["max_delay_seconds"]),
@@ -245,24 +232,9 @@ class Settings:
         if not 0 <= self.max_retries <= 10:
             raise ConfigurationError("SCRAPER_MAX_RETRIES must be between 0 and 10")
 
-    def require_live_permission(self) -> None:
-        """Запрещает живой сбор без явно подтверждённого разрешения оператора."""
+    def require_phone_reveal_policy(self) -> None:
+        """Запретить браузерное раскрытие телефона при включённой политике robots.txt."""
 
-        if not self.operator_permission:
-            raise ConfigurationError(
-                "Live collection is disabled. Obtain written permission from the Yandex "
-                "Services operator, then set YANDEX_OPERATOR_PERMISSION=true."
-            )
-
-    def require_phone_reveal_permission(self) -> None:
-        """Проверяет разрешения на живой сбор и контакты, а также допустимость robots policy."""
-
-        self.require_live_permission()
-        if not self.phone_permission:
-            raise ConfigurationError(
-                "Phone collection is disabled. Confirm that permission and your lawful basis "
-                "cover contact data, then set YANDEX_PHONE_PERMISSION=true."
-            )
         if self.respect_robots:
             raise ConfigurationError(
                 "The current phone reveal uses a route disallowed by robots.txt. It remains "

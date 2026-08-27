@@ -97,14 +97,14 @@ def test_repository_upsert_and_category_links() -> None:
         assert session.query(ProfessionalCategoryRubric).count() == 2
 
     repository.upsert(
-        make_profile(phone=None, phone_status="permission_required"),
+        make_profile(phone=None, phone_status="not_public"),
         DEFAULT_CATEGORIES["plumbers"],
     )
     with sessions() as session:
         professional = session.scalar(select(Professional))
         assert professional is not None
         assert professional.phone is None
-        assert professional.phone_status == "permission_required"
+        assert professional.phone_status == "not_public"
 
 
 def test_repository_normalizes_phone_before_plaintext_storage() -> None:

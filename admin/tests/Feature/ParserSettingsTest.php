@@ -68,6 +68,9 @@ class ParserSettingsTest extends TestCase
             ->assertOk()
             ->assertSee('Настройки')
             ->assertSee('Сохранить настройки')
+            ->assertSee('письменного разрешения Яндекса')
+            ->assertDontSee('YANDEX_OPERATOR_PERMISSION')
+            ->assertDontSee('YANDEX_PHONE_PERMISSION')
             ->assertDontSee('UNSUPPORTED_PRIVATE_KEY')
             ->assertDontSee('must-not-be-rendered');
 

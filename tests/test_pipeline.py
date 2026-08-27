@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import replace
 
 import pytest
 from conftest import html_with_state, make_state, make_worker
@@ -18,8 +17,6 @@ def live_settings() -> Settings:
         database_url="sqlite+pysqlite:///:memory:",
         user_agent="TestParser/1.0",
         geo="213-moscow",
-        operator_permission=True,
-        phone_permission=False,
         respect_robots=False,
         min_delay_seconds=0,
         max_delay_seconds=0,
@@ -141,13 +138,9 @@ async def test_phone_captcha_aborts_entire_crawl() -> None:
             "https://uslugi.yandex.ru/profile/TestMaster-123456",
         ),
     )
-    settings = replace(
-        live_settings(),
-        phone_permission=True,
-    )
     with pytest.raises(CrawlAborted, match="CAPTCHA"):
         await crawl(
-            settings=settings,
+            settings=live_settings(),
             categories=[DEFAULT_CATEGORIES["plumbers"]],
             max_pages=1,
             max_profiles=1,

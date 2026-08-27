@@ -65,9 +65,8 @@ async def crawl(
         max_profiles=max_profiles,
         collect_phone=collect_phone,
     )
-    settings.require_live_permission()
     if options.collect_phone:
-        settings.require_phone_reveal_permission()
+        settings.require_phone_reveal_policy()
         if phone_collector_factory is None:
             raise ConfigurationError("phone collector is not configured")
 
@@ -232,10 +231,6 @@ async def crawl(
                             ):
                                 stats.skipped_organizations += 1
                                 profile = None
-
-                            if profile and profile.phone and not settings.phone_permission:
-                                profile.phone = None
-                                profile.phone_status = "permission_required"
 
                             if profile and profile.phone:
                                 stats.phone_collected += 1

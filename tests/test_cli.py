@@ -27,8 +27,6 @@ def cli_settings() -> Settings:
         database_url="sqlite+pysqlite:///:memory:",
         user_agent="TestParser/1.0",
         geo="213-moscow",
-        operator_permission=True,
-        phone_permission=False,
         respect_robots=True,
         min_delay_seconds=0,
         max_delay_seconds=0,
@@ -56,15 +54,15 @@ class RecordingRunService:
         return operation()
 
 
-def test_local_html_masks_phone_without_permission(tmp_path, capsys) -> None:
+def test_local_html_keeps_public_phone_without_permission_flags(tmp_path, capsys) -> None:
+    """Возвращать публичный телефон без устаревших YANDEX_PERMISSION-флагов."""
+
     page = tmp_path / "profile.html"
     page.write_text(html_with_state(make_state(make_worker())), encoding="utf-8")
     settings = Settings(
         database_url="sqlite+pysqlite:///:memory:",
         user_agent="TestParser/1.0",
         geo="213-moscow",
-        operator_permission=False,
-        phone_permission=False,
         respect_robots=True,
         min_delay_seconds=0,
         max_delay_seconds=0,
@@ -83,8 +81,8 @@ def test_local_html_masks_phone_without_permission(tmp_path, capsys) -> None:
     )
     assert _run_parse_html(args, settings) == 0
     output = json.loads(capsys.readouterr().out)
-    assert output["phone"] is None
-    assert output["phone_status"] == "permission_required"
+    assert output["phone"] == "+79991234567"
+    assert output["phone_status"] == "public_messenger"
 
 
 class RecordingRepository:
