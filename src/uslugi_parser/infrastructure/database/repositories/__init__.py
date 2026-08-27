@@ -6,5 +6,8 @@ from uslugi_parser.infrastructure.database.repositories.parser_log import (
 from uslugi_parser.infrastructure.database.repositories.professional import (
     ProfessionalRepository,
 )
+from uslugi_parser.infrastructure.database.repositories.settings import (
+    ParserSettingRepository,
+)
 
-__all__ = ["ParserLogRepository", "ProfessionalRepository"]
+__all__ = ["ParserLogRepository", "ParserSettingRepository", "ProfessionalRepository"]

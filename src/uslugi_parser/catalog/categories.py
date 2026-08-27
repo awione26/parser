@@ -13,10 +13,10 @@ GEO_SLUG_PATTERN = re.compile(r"^[0-9]+-[a-z0-9]+(?:-[a-z0-9]+)*$")
 def validate_geo_slug(geo: str) -> str:
     """Проверяет безопасный формат географического slug и возвращает его без изменений."""
 
-    if not GEO_SLUG_PATTERN.fullmatch(geo):
+    if len(geo) > 128 or not GEO_SLUG_PATTERN.fullmatch(geo):
         raise ValueError(
-            "Yandex geo must look like '213-moscow' and contain only lowercase "
-            "ASCII letters, digits, and hyphens"
+            "Yandex geo must be at most 128 characters, look like '213-moscow', and "
+            "contain only lowercase ASCII letters, digits, and hyphens"
         )
     return geo
 

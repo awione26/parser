@@ -5,11 +5,11 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DataTableController;
 use App\Http\Controllers\Admin\ParserLogController;
+use App\Http\Controllers\Admin\ParserSettingController;
 use App\Http\Controllers\Admin\PhoneController;
 use App\Http\Controllers\Admin\ProfessionalController;
 use App\Http\Controllers\Admin\ProfessionalDeletionController;
 use App\Http\Controllers\Admin\ProfessionalExportController;
-use App\Http\Controllers\Admin\ParserSettingController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {

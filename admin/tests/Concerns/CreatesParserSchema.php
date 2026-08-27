@@ -23,6 +23,13 @@ trait CreatesParserSchema
             $table->index(['resource', 'started_at']);
         });
 
+        $schema->create('settings', function (Blueprint $table): void {
+            $table->string('key', 64)->primary();
+            $table->text('value');
+            $table->dateTime('created_at');
+            $table->dateTime('updated_at');
+        });
+
         $schema->create('categories', function (Blueprint $table): void {
             $table->id();
             $table->string('key')->unique();

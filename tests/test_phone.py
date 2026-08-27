@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from uslugi_parser.exceptions import PhoneNavigationBlocked
+from uslugi_parser.exceptions import PhoneCollectorUnavailable, PhoneNavigationBlocked
 from uslugi_parser.infrastructure.browser import PhoneCollector
 
 
@@ -86,6 +86,26 @@ async def test_browser_launch_enables_chromium_sandbox(
         "chromium_sandbox": True,
         "executable_path": "/usr/bin/chromium",
     }
+
+
+@pytest.mark.asyncio
+async def test_headed_linux_browser_requires_display(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """До запуска Chromium объяснить ограничение headed-режима в Docker/Linux."""
+
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    collector = PhoneCollector(
+        user_agent="TestParser/1.0",
+        headless=False,
+        timeout_seconds=1,
+        min_delay_seconds=0,
+    )
+
+    with pytest.raises(PhoneCollectorUnavailable, match="SCRAPER_PHONE_HEADLESS=true"):
+        await collector.__aenter__()
 
 
 class BrokenPage:

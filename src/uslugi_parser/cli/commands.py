@@ -101,7 +101,18 @@ def _build_parser() -> argparse.ArgumentParser:
 
     parse_profile = commands.add_parser("parse-profile", help="fetch and parse one live profile")
     parse_profile.add_argument("url")
-    parse_profile.add_argument("--collect-phone", action="store_true")
+    profile_phone_group = parse_profile.add_mutually_exclusive_group()
+    profile_phone_group.add_argument(
+        "--collect-phone",
+        dest="collect_phone",
+        action="store_true",
+    )
+    profile_phone_group.add_argument(
+        "--no-collect-phone",
+        dest="collect_phone",
+        action="store_false",
+    )
+    profile_phone_group.set_defaults(collect_phone=None)
     parse_profile.add_argument("--save", action="store_true", help="upsert the result into MySQL")
     parse_profile.add_argument("--category", choices=sorted(DEFAULT_CATEGORIES))
     parse_profile.add_argument(
@@ -198,10 +209,11 @@ async def _run_parse_profile(args: argparse.Namespace, settings: Settings) -> in
     if args.no_respect_robots:
         settings = settings.with_overrides(respect_robots=False)
         logger.warning("robots_policy_override_enabled")
+    collect_phone = settings.collect_phone if args.collect_phone is None else args.collect_phone
     profile = await parse_live_profile(
         args.url,
         settings,
-        collect_phone=args.collect_phone,
+        collect_phone=collect_phone,
         fetcher_factory=_fetcher,
         phone_collector_factory=_phone_collector,
     )

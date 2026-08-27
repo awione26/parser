@@ -63,7 +63,9 @@ def upgrade() -> None:
         sa.CheckConstraint(_allowed_keys_constraint(), name="ck_settings_known_key"),
         sa.PrimaryKeyConstraint("key"),
         mysql_charset="utf8mb4",
-        mysql_collate="utf8mb4_unicode_ci",
+        # Бинарное сравнение делает whitelist ключей чувствительным к регистру:
+        # MySQL не должен считать SCRAPER_GEO и scraper_geo одним значением.
+        mysql_collate="utf8mb4_bin",
     )
     settings_table = sa.table(
         "settings",

@@ -40,6 +40,7 @@ def test_layered_package_layout() -> None:
         "infrastructure/database/models.py",
         "infrastructure/database/repositories/professional.py",
         "infrastructure/database/repositories/parser_log.py",
+        "infrastructure/database/repositories/settings.py",
         "config/settings.py",
         "config/database.py",
         "catalog/categories.py",
@@ -136,3 +137,19 @@ def test_runtime_roles_have_minimal_parser_log_grants() -> None:
     )
     assert "GRANT SELECT ON ${database}.logs TO 'uslugi_admin'@'%';" in grant_script
     assert "DELETE ON ${database}.logs" not in grant_script
+
+
+def test_runtime_roles_have_minimal_parser_setting_grants() -> None:
+    """Проверить чтение настроек парсером и редактирование только через админку."""
+
+    grant_script = (PACKAGE.parents[1] / "docker/mysql/grant-runtime-users.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "GRANT SELECT ON ${database}.settings TO 'uslugi_parser'@'%';" in grant_script
+    assert (
+        "GRANT SELECT, INSERT, UPDATE ON ${database}.settings TO 'uslugi_admin'@'%';"
+        in grant_script
+    )
+    assert "INSERT, UPDATE ON ${database}.settings TO 'uslugi_parser'" not in grant_script
+    assert "DELETE ON ${database}.settings" not in grant_script

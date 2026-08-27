@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+import sys
 from types import TracebackType
 from typing import Any
 
@@ -49,12 +50,22 @@ class PhoneCollector:
     async def __aenter__(self) -> PhoneCollector:
         """Запустить Chromium и подготовить защищённый контекст страницы."""
 
+        if (
+            not self.headless
+            and sys.platform.startswith("linux")
+            and not os.getenv("DISPLAY")
+            and not os.getenv("WAYLAND_DISPLAY")
+        ):
+            raise PhoneCollectorUnavailable(
+                "Headed phone collection on Linux requires DISPLAY or WAYLAND_DISPLAY; "
+                "Docker users must keep SCRAPER_PHONE_HEADLESS=true."
+            )
         try:
             from playwright.async_api import async_playwright
         except ImportError as exc:
             raise PhoneCollectorUnavailable(
                 "Phone collection requires: pip install -e '.[phone]' and "
-                "playwright install chromium"
+                "playwright install chromium. In Docker use the parser-phone service."
             ) from exc
         try:
             self._playwright = await async_playwright().start()

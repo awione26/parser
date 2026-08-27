@@ -2,15 +2,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 from collections.abc import Callable
+from dataclasses import replace
 
 import pytest
 from conftest import html_with_state, make_state, make_worker
+from sqlalchemy.exc import OperationalError
 
+import uslugi_parser.cli.commands as cli_commands
 import uslugi_parser.cli.main as cli_main
 from uslugi_parser.application import save_profile
-from uslugi_parser.cli.commands import _run_parse_html
+from uslugi_parser.cli.commands import _build_parser, _run_parse_html, _run_parse_profile
 from uslugi_parser.config import Settings
+from uslugi_parser.config.settings import SCRAPER_SETTING_DEFAULTS
 from uslugi_parser.exceptions import ConfigurationError
 from uslugi_parser.parsing import parse_profile_html
 
@@ -123,11 +128,7 @@ def test_parser_commands_use_run_log_lifecycle(
 
         return 0
 
-    monkeypatch.setattr(
-        cli_main.Settings,
-        "from_env",
-        classmethod(lambda _cls: settings),
-    )
+    monkeypatch.setattr(cli_main, "_load_effective_settings", lambda **_kwargs: settings)
     monkeypatch.setattr(cli_main, "_parser_run_service", lambda _settings: service)
     monkeypatch.setattr(cli_main, "_run_parse_html", lambda _args, _settings: 0)
     monkeypatch.setattr(cli_main, "_run_parse_profile", successful_async_command)
@@ -142,11 +143,7 @@ def test_categories_command_does_not_create_parser_run_log(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     settings = cli_settings()
-    monkeypatch.setattr(
-        cli_main.Settings,
-        "from_env",
-        classmethod(lambda _cls: settings),
-    )
+    monkeypatch.setattr(cli_main, "_load_effective_settings", lambda **_kwargs: settings)
 
     def unexpected_service(_settings: Settings) -> RecordingRunService:
         """Сообщить об ошибке, если справочная команда откроет журнал."""
@@ -157,3 +154,177 @@ def test_categories_command_does_not_create_parser_run_log(
 
     assert cli_main.main(["categories"]) == 0
     assert json.loads(capsys.readouterr().out)
+
+
+def test_cli_database_settings_override_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Проверить приоритет значения из таблицы settings над окружением CLI."""
+
+    monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///:memory:")
+    monkeypatch.setenv("SCRAPER_GEO", "213-moscow")
+    monkeypatch.setenv("SCRAPER_COLLECT_PHONE", "false")
+    monkeypatch.setattr(
+        cli_main.ParserSettingRepository,
+        "read_all",
+        lambda _repository: {
+            "SCRAPER_GEO": "54-ekaterinburg",
+            "SCRAPER_COLLECT_PHONE": "true",
+        },
+    )
+
+    loaded = cli_main._load_effective_settings()
+
+    assert loaded.geo == "54-ekaterinburg"
+    assert loaded.collect_phone is True
+    assert loaded.user_agent == SCRAPER_SETTING_DEFAULTS["SCRAPER_USER_AGENT"]
+
+
+def test_cli_uses_environment_when_settings_table_is_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Продолжить bootstrap с env и записать безопасное предупреждение без SQL/DSN."""
+
+    environment = cli_settings()
+    monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///:memory:")
+    monkeypatch.setattr(
+        cli_main.Settings,
+        "from_env",
+        classmethod(lambda _cls: environment),
+    )
+
+    def unavailable(_repository: object) -> dict[str, str]:
+        """Имитировать отсутствующую таблицу без открытия настоящей базы."""
+
+        raise OperationalError("SELECT secret", {}, RuntimeError("dsn-password-secret"))
+
+    monkeypatch.setattr(cli_main.ParserSettingRepository, "read_all", unavailable)
+
+    with caplog.at_level(logging.WARNING):
+        loaded = cli_main._load_effective_settings(allow_environment_fallback=True)
+
+    assert loaded is environment
+    assert "используются значения окружения" in caplog.text
+    assert "SELECT secret" not in caplog.text
+    assert "dsn-password-secret" not in caplog.text
+
+
+def test_network_command_fails_closed_when_database_settings_are_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Остановить сетевой запуск, если безопасную политику нельзя прочитать из БД."""
+
+    monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///:memory:")
+
+    def unavailable(_repository: object) -> dict[str, str]:
+        """Имитировать недоступную таблицу конфигурации."""
+
+        raise OperationalError("SELECT settings", {}, RuntimeError("database unavailable"))
+
+    monkeypatch.setattr(cli_main.ParserSettingRepository, "read_all", unavailable)
+
+    with pytest.raises(ConfigurationError, match="сетевой сбор остановлен"):
+        cli_main._load_effective_settings()
+
+
+def test_cli_does_not_hide_invalid_database_setting(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Передать ошибку валидации БД вызывающему коду вместо тихого env fallback."""
+
+    monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///:memory:")
+
+    def unexpected_env_fallback(_cls: type[Settings]) -> Settings:
+        """Сообщить, если доступная таблица ошибочно заменена окружением."""
+
+        raise AssertionError("invalid database values must not trigger env fallback")
+
+    monkeypatch.setattr(
+        cli_main.Settings,
+        "from_env",
+        classmethod(unexpected_env_fallback),
+    )
+    monkeypatch.setattr(
+        cli_main.ParserSettingRepository,
+        "read_all",
+        lambda _repository: {"SCRAPER_TIMEOUT_SECONDS": "never"},
+    )
+
+    with pytest.raises(ConfigurationError, match="must be a number"):
+        cli_main._load_effective_settings()
+
+
+def test_valid_database_settings_ignore_invalid_operational_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Не валидировать повреждённый SCRAPER env, когда authoritative БД доступна."""
+
+    monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///:memory:")
+    monkeypatch.setenv("SCRAPER_TIMEOUT_SECONDS", "invalid-env-value")
+    monkeypatch.setattr(
+        cli_main.ParserSettingRepository,
+        "read_all",
+        lambda _repository: dict(SCRAPER_SETTING_DEFAULTS),
+    )
+
+    loaded = cli_main._load_effective_settings()
+
+    assert loaded.timeout_seconds == 30.0
+
+
+def test_parse_profile_phone_flag_is_tristate() -> None:
+    """Оставить настройку БД основной и разрешить явное включение либо выключение CLI."""
+
+    parser = _build_parser()
+    base = ["parse-profile", "https://uslugi.yandex.ru/profile/Test-1"]
+
+    assert parser.parse_args(base).collect_phone is None
+    assert parser.parse_args([*base, "--collect-phone"]).collect_phone is True
+    assert parser.parse_args([*base, "--no-collect-phone"]).collect_phone is False
+
+
+class PublicProfileStub:
+    """Предоставлять минимальный публичный результат для CLI-теста профиля."""
+
+    def public_dict(self) -> dict[str, str]:
+        """Вернуть сериализуемое представление фиктивного профиля."""
+
+        return {"source": "test"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("argument_value", "expected"),
+    [(None, True), (True, True), (False, False)],
+)
+async def test_parse_profile_uses_database_phone_default_and_cli_override(
+    argument_value: bool | None,
+    expected: bool,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Передать в профиль effective collect_phone с приоритетом явного CLI-флага."""
+
+    observed: list[bool] = []
+
+    async def fake_parse_live_profile(
+        _url: str,
+        _settings: Settings,
+        *,
+        collect_phone: bool,
+        **_kwargs: object,
+    ) -> PublicProfileStub:
+        """Запомнить effective-флаг без выполнения сетевого запроса."""
+
+        observed.append(collect_phone)
+        return PublicProfileStub()
+
+    monkeypatch.setattr(cli_commands, "parse_live_profile", fake_parse_live_profile)
+    args = argparse.Namespace(
+        url="https://uslugi.yandex.ru/profile/Test-1",
+        collect_phone=argument_value,
+        save=False,
+        category=None,
+        no_respect_robots=False,
+    )
+
+    assert await _run_parse_profile(args, replace(cli_settings(), collect_phone=True)) == 0
+    assert observed == [expected]
+    assert json.loads(capsys.readouterr().out) == {"source": "test"}

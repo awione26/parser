@@ -17,10 +17,12 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from uslugi_parser import __version__
+from uslugi_parser.config.settings import SCRAPER_SETTING_DEFAULTS
 
 
 def utcnow() -> datetime:
@@ -37,6 +39,32 @@ class Base(DeclarativeBase):
     """Предоставлять общий декларативный базовый класс ORM-моделей парсера."""
 
     pass
+
+
+_SETTING_KEYS_SQL = ", ".join(f"'{name}'" for name in SCRAPER_SETTING_DEFAULTS)
+
+
+class ParserSetting(Base):
+    """Хранить одно редактируемое строковое значение конфигурации парсера."""
+
+    __tablename__ = "settings"
+    __table_args__ = (
+        CheckConstraint(f"`key` IN ({_SETTING_KEYS_SQL})", name="ck_settings_known_key"),
+        {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_bin"},
+    )
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.current_timestamp(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.current_timestamp(),
+    )
 
 
 class ParserLog(Base):

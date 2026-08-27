@@ -10,10 +10,12 @@ from alembic import command
 from alembic.config import Config
 from cryptography.fernet import Fernet
 
+from uslugi_parser.config.settings import SCRAPER_SETTING_DEFAULTS
+
 ROOT = Path(__file__).resolve().parents[1]
 BASE_REVISION = "20260820_01"
 LEGACY_REVISION = "20260826_02"
-HEAD_REVISION = "20260827_04"
+HEAD_REVISION = "20260827_05"
 
 
 def alembic_config(*, output_buffer: StringIO | None = None) -> Config:
@@ -95,6 +97,20 @@ def log_schema_state(database_url: str) -> tuple[set[str], set[str]]:
             str(index["name"]) for index in inspector.get_indexes("logs") if index.get("name")
         }
         return columns, indexes
+    finally:
+        engine.dispose()
+
+
+def settings_schema_state(database_url: str) -> tuple[set[str], dict[str, str]]:
+    """Вернуть колонки и начальные пары ключ-значение таблицы settings."""
+
+    engine = sa.create_engine(database_url)
+    try:
+        inspector = sa.inspect(engine)
+        columns = {str(column["name"]) for column in inspector.get_columns("settings")}
+        with engine.connect() as connection:
+            rows = connection.execute(sa.text("SELECT `key`, value FROM settings")).all()
+        return columns, {str(key): str(value) for key, value in rows}
     finally:
         engine.dispose()
 
@@ -186,6 +202,9 @@ def test_fresh_upgrade_creates_plaintext_schema_without_legacy_key(
         "ix_logs_result_started_at",
         "ix_logs_resource_started_at",
     }
+    setting_columns, setting_rows = settings_schema_state(database_url)
+    assert setting_columns == {"key", "value", "created_at", "updated_at"}
+    assert setting_rows == SCRAPER_SETTING_DEFAULTS
 
 
 def test_upgrade_decrypts_legacy_phone_then_drops_legacy_columns(
@@ -299,6 +318,10 @@ def test_full_offline_sql_contains_plaintext_schema(monkeypatch: pytest.MonkeyPa
     assert "resource VARCHAR(255) NOT NULL" in sql
     assert "CREATE INDEX ix_logs_result_started_at ON logs (result, started_at)" in sql
     assert "CREATE INDEX ix_logs_resource_started_at ON logs (resource, started_at)" in sql
+    assert "CREATE TABLE settings" in sql
+    assert "CONSTRAINT ck_settings_known_key CHECK" in sql
+    assert ")CHARSET=utf8mb4 COLLATE utf8mb4_bin" in sql
+    assert sql.count("INSERT INTO settings") == len(SCRAPER_SETTING_DEFAULTS)
 
 
 def test_incremental_offline_sql_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:

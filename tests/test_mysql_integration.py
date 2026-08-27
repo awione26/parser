@@ -10,12 +10,15 @@ from threading import Barrier
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import func, inspect, select
+from sqlalchemy import func, inspect, select, text
 from sqlalchemy.engine import make_url
+from sqlalchemy.exc import DBAPIError
 
 from uslugi_parser.catalog.categories import DEFAULT_CATEGORIES
+from uslugi_parser.config.settings import SCRAPER_SETTING_DEFAULTS
 from uslugi_parser.domain import ParsedProfessional, RubricEvidence
 from uslugi_parser.infrastructure.database import (
+    ParserSetting,
     Professional,
     ProfessionalCategory,
     ProfessionalCategoryRubric,
@@ -84,6 +87,28 @@ def test_mysql_migration_plaintext_concurrent_upsert_and_cascade() -> None:
             command.check(alembic_config)
             engine = make_engine(database_url)
             sessions = make_session_factory(engine)
+            with sessions() as session:
+                settings = {
+                    key: value
+                    for key, value in session.execute(
+                        select(ParserSetting.key, ParserSetting.value)
+                    )
+                }
+                collation = session.scalar(
+                    text(
+                        "SELECT table_collation FROM information_schema.tables "
+                        "WHERE table_schema = :schema AND table_name = 'settings'"
+                    ),
+                    {"schema": parsed_url.database},
+                )
+            assert settings == SCRAPER_SETTING_DEFAULTS
+            assert collation == "utf8mb4_bin"
+
+            for invalid_key in ("SCRAPER_UNKNOWN", "scraper_geo"):
+                with pytest.raises(DBAPIError):
+                    with sessions.begin() as session:
+                        session.add(ParserSetting(key=invalid_key, value="invalid"))
+
             evidence = RubricEvidence(
                 level="specialization",
                 number_id=1844,

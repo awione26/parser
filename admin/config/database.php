@@ -68,7 +68,8 @@ return [
          * Restricted connection to tables owned by the Python/Alembic parser.
          * In a minimal local setup it may point to the same database as the
          * default connection. Production should grant SELECT on parser data and
-         * logs, and DELETE only on professionals so database cascades remove links.
+         * logs/settings, DELETE only on professionals and INSERT/UPDATE only on
+         * settings so database cascades remove professional links.
          */
         'parser' => [
             'driver' => 'mysql',

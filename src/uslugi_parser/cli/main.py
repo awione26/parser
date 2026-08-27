@@ -18,7 +18,8 @@ from uslugi_parser.cli.commands import (
     _run_parse_html,
     _run_parse_profile,
 )
-from uslugi_parser.config import Settings
+from uslugi_parser.config import Settings, bootstrap_database_url_from_env
+from uslugi_parser.config.settings import SCRAPER_SETTING_DEFAULTS
 from uslugi_parser.exceptions import (
     ConfigurationError,
     CrawlAborted,
@@ -27,8 +28,44 @@ from uslugi_parser.exceptions import (
     PhoneCollectorUnavailable,
     PhoneNavigationBlocked,
 )
+from uslugi_parser.infrastructure.database import (
+    ParserSettingRepository,
+    make_engine,
+    make_session_factory,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _load_effective_settings(*, allow_environment_fallback: bool = False) -> Settings:
+    """Прочитать БД, разрешив env fallback только для явно безопасной локальной команды."""
+
+    database_url = bootstrap_database_url_from_env()
+    try:
+        engine = make_engine(database_url)
+        try:
+            repository = ParserSettingRepository(make_session_factory(engine))
+            database_values = repository.read_all()
+        finally:
+            engine.dispose()
+    except SQLAlchemyError as error:
+        if not allow_environment_fallback:
+            raise ConfigurationError(
+                "Настройки БД недоступны; сетевой сбор остановлен безопасно."
+            ) from error
+        logger.warning(
+            "Настройки БД недоступны (%s); используются значения окружения.",
+            type(error).__name__,
+        )
+        return Settings.from_env()
+
+    missing_count = len(SCRAPER_SETTING_DEFAULTS.keys() - database_values.keys())
+    if missing_count:
+        logger.warning(
+            "В таблице settings отсутствуют настройки: %d; используются канонические defaults.",
+            missing_count,
+        )
+    return Settings.from_database_values(database_url, database_values)
 
 
 def _run_parsing_command(args: argparse.Namespace, settings: Settings) -> int:
@@ -52,7 +89,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     _configure_logging(args.verbose)
     try:
-        settings = Settings.from_env()
+        settings = _load_effective_settings(
+            allow_environment_fallback=args.command in {"categories", "parse-html"}
+        )
         if args.command == "categories":
             return _run_categories(settings)
         if args.command in {"parse-html", "parse-profile", "crawl"}:

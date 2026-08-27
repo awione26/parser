@@ -3,13 +3,15 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from sqlalchemy import create_engine, select
+from sqlalchemy import Column, MetaData, String, Table, Text, create_engine, select
 from sqlalchemy.exc import IntegrityError
 
 from uslugi_parser.catalog.categories import DEFAULT_CATEGORIES
 from uslugi_parser.domain import ParsedProfessional, RubricEvidence
 from uslugi_parser.infrastructure.database import (
     Base,
+    ParserSetting,
+    ParserSettingRepository,
     Professional,
     ProfessionalCategory,
     ProfessionalCategoryRubric,
@@ -157,3 +159,49 @@ def test_repository_retries_a_unique_constraint_race(monkeypatch) -> None:
         == "created"
     )
     assert calls == 2
+
+
+def test_setting_repository_reads_key_value_rows_without_writing() -> None:
+    """Проверить контракт read-only репозитория настроек для runtime-парсера."""
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    sessions = make_session_factory(engine)
+    with sessions.begin() as session:
+        session.add_all(
+            [
+                ParserSetting(key="SCRAPER_GEO", value="213-moscow"),
+                ParserSetting(key="SCRAPER_MAX_RETRIES", value="3"),
+            ]
+        )
+
+    assert ParserSettingRepository(sessions).read_all() == {
+        "SCRAPER_GEO": "213-moscow",
+        "SCRAPER_MAX_RETRIES": "3",
+    }
+
+
+def test_setting_repository_ignores_future_unknown_keys() -> None:
+    """Не ломать старый parser при появлении нового ключа во время rolling deploy."""
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    metadata = MetaData()
+    raw_settings = Table(
+        "settings",
+        metadata,
+        Column("key", String(64), primary_key=True),
+        Column("value", Text, nullable=False),
+    )
+    metadata.create_all(engine)
+    with engine.begin() as connection:
+        connection.execute(
+            raw_settings.insert(),
+            [
+                {"key": "SCRAPER_GEO", "value": "213-moscow"},
+                {"key": "SCRAPER_FUTURE_OPTION", "value": "future"},
+            ],
+        )
+
+    repository = ParserSettingRepository(make_session_factory(engine))
+
+    assert repository.read_all() == {"SCRAPER_GEO": "213-moscow"}
