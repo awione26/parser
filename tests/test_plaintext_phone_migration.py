@@ -15,7 +15,8 @@ from uslugi_parser.config.settings import SCRAPER_SETTING_DEFAULTS
 ROOT = Path(__file__).resolve().parents[1]
 BASE_REVISION = "20260820_01"
 LEGACY_REVISION = "20260826_02"
-HEAD_REVISION = "20260827_05"
+SETTINGS_REVISION = "20260827_05"
+HEAD_REVISION = "20260827_06"
 
 
 def alembic_config(*, output_buffer: StringIO | None = None) -> Config:
@@ -82,6 +83,37 @@ def schema_state(database_url: str) -> tuple[set[str], set[str], str]:
         with engine.connect() as connection:
             version = str(connection.scalar(sa.text("SELECT version_num FROM alembic_version")))
         return columns, indexes, version
+    finally:
+        engine.dispose()
+
+
+def professional_unique_constraints(database_url: str) -> set[tuple[str, ...]]:
+    """Вернуть уникальные наборы колонок, защищающие идентичность мастеров."""
+
+    engine = sa.create_engine(database_url)
+    try:
+        return {
+            tuple(str(column) for column in constraint.get("column_names") or [])
+            for constraint in sa.inspect(engine).get_unique_constraints("professionals")
+        }
+    finally:
+        engine.dispose()
+
+
+def professional_identity_state(database_url: str) -> tuple[set[str], int]:
+    """Вернуть схему и число сохранённых алиасов исходных ID мастеров."""
+
+    engine = sa.create_engine(database_url)
+    try:
+        columns = {
+            str(column["name"])
+            for column in sa.inspect(engine).get_columns("professional_identities")
+        }
+        with engine.connect() as connection:
+            count = int(
+                connection.scalar(sa.text("SELECT COUNT(*) FROM professional_identities")) or 0
+            )
+        return columns, count
     finally:
         engine.dispose()
 
@@ -187,6 +219,15 @@ def test_fresh_upgrade_creates_plaintext_schema_without_legacy_key(
     assert "phone_ciphertext" not in columns
     assert "phone_hmac" not in columns
     assert "ix_professionals_phone" in indexes
+    assert "profile_url_hash" in columns
+    assert professional_unique_constraints(database_url) >= {
+        ("source", "source_profile_id"),
+        ("source", "profile_url_hash"),
+    }
+    assert professional_identity_state(database_url) == (
+        {"source", "source_profile_id", "professional_id", "created_at"},
+        0,
+    )
     assert version == HEAD_REVISION
     log_columns, log_indexes = log_schema_state(database_url)
     assert log_columns == {
@@ -230,6 +271,7 @@ def test_upgrade_decrypts_legacy_phone_then_drops_legacy_columns(
     assert "phone_hmac" not in columns
     assert "ix_professionals_phone" in indexes
     assert version == HEAD_REVISION
+    assert professional_identity_state(database_url)[1] == 1
     engine = sa.create_engine(database_url)
     try:
         with engine.connect() as connection:
@@ -322,6 +364,56 @@ def test_full_offline_sql_contains_plaintext_schema(monkeypatch: pytest.MonkeyPa
     assert "CONSTRAINT ck_settings_known_key CHECK" in sql
     assert ")CHARSET=utf8mb4 COLLATE utf8mb4_bin" in sql
     assert sql.count("INSERT INTO settings") == len(SCRAPER_SETTING_DEFAULTS)
+    assert "ADD COLUMN profile_url_hash VARCHAR(64)" in sql
+    assert "CONSTRAINT uq_professional_source_url_hash UNIQUE" in sql
+    assert "CONSTRAINT ck_professionals_source_profile_id_not_blank CHECK" in sql
+    assert "CREATE TABLE professional_identities" in sql
+    assert "fk_professional_identities_professional_id" in sql
+
+
+def test_identity_upgrade_rejects_existing_duplicate_canonical_urls(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Не включать новый unique key, пока старые логические дубли не объединены."""
+
+    database_url = sqlite_url(tmp_path / "duplicate-identities.sqlite")
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    command.upgrade(alembic_config(), SETTINGS_REVISION)
+    engine = sa.create_engine(database_url)
+    now = datetime(2026, 8, 27, 12, 0, 0)
+    try:
+        with engine.begin() as connection:
+            for row_id, source_profile_id, profile_url in (
+                (1, "stable-a", "https://uslugi.yandex.ru/profile/Same-1?from=search"),
+                (2, "stable-b", "https://uslugi.yandex.ru/profile/Same-1#reviews"),
+            ):
+                connection.execute(
+                    sa.text(
+                        "INSERT INTO professionals ("
+                        "id, source, source_profile_id, profile_url, phone_status, age_as_of, "
+                        "content_hash, parser_version, first_seen_at, last_seen_at, "
+                        "last_scraped_at) VALUES ("
+                        ":id, 'uslugi.yandex.ru', :source_profile_id, :profile_url, "
+                        "'not_requested', '2026-08-27', :content_hash, '0.1.0', :now, :now, :now)"
+                    ),
+                    {
+                        "id": row_id,
+                        "source_profile_id": source_profile_id,
+                        "profile_url": profile_url,
+                        "content_hash": str(row_id) * 64,
+                        "now": now,
+                    },
+                )
+    finally:
+        engine.dispose()
+
+    with pytest.raises(RuntimeError, match="duplicate canonical professional URL"):
+        command.upgrade(alembic_config(), "head")
+
+    columns, _indexes, version = schema_state(database_url)
+    assert "profile_url_hash" not in columns
+    assert version == SETTINGS_REVISION
 
 
 def test_incremental_offline_sql_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -334,6 +426,24 @@ def test_incremental_offline_sql_is_refused(monkeypatch: pytest.MonkeyPatch) -> 
         command.upgrade(
             alembic_config(output_buffer=StringIO()),
             f"{LEGACY_REVISION}:head",
+            sql=True,
+        )
+
+
+def test_identity_incremental_offline_sql_is_refused(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Не обходить preflight идентичности через incremental --sql."""
+
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "mysql+pymysql://uslugi:test@127.0.0.1:3306/uslugi?charset=utf8mb4",
+    )
+
+    with pytest.raises(RuntimeError, match="cannot canonicalize and validate"):
+        command.upgrade(
+            alembic_config(output_buffer=StringIO()),
+            f"{SETTINGS_REVISION}:head",
             sql=True,
         )
 

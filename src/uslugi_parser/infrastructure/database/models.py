@@ -33,6 +33,10 @@ def utcnow() -> datetime:
 
 
 PRIMARY_KEY_TYPE = BigInteger().with_variant(Integer, "sqlite")
+SOURCE_PROFILE_ID_TYPE = String(128).with_variant(
+    String(128, collation="NOCASE"),
+    "sqlite",
+)
 
 
 class Base(DeclarativeBase):
@@ -102,6 +106,15 @@ class Professional(Base):
     __tablename__ = "professionals"
     __table_args__ = (
         UniqueConstraint("source", "source_profile_id", name="uq_professional_source_id"),
+        UniqueConstraint(
+            "source",
+            "profile_url_hash",
+            name="uq_professional_source_url_hash",
+        ),
+        CheckConstraint(
+            "LENGTH(TRIM(source_profile_id)) > 0",
+            name="ck_professionals_source_profile_id_not_blank",
+        ),
         Index("ix_professionals_last_scraped_at", "last_scraped_at"),
         Index("ix_professionals_location", "country", "region", "city"),
         Index("ix_professionals_gender_age", "gender", "age"),
@@ -111,8 +124,9 @@ class Professional(Base):
 
     id: Mapped[int] = mapped_column(PRIMARY_KEY_TYPE, primary_key=True, autoincrement=True)
     source: Mapped[str] = mapped_column(String(64), nullable=False)
-    source_profile_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    source_profile_id: Mapped[str] = mapped_column(SOURCE_PROFILE_ID_TYPE, nullable=False)
     profile_url: Mapped[str] = mapped_column(String(1024), nullable=False)
+    profile_url_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     full_name: Mapped[str | None] = mapped_column(String(255))
     phone: Mapped[str | None] = mapped_column(String(32), index=True)
     phone_status: Mapped[str] = mapped_column(String(32), nullable=False, default="not_requested")
@@ -134,6 +148,29 @@ class Professional(Base):
     category_links: Mapped[list[ProfessionalCategory]] = relationship(
         back_populates="professional", cascade="all, delete-orphan"
     )
+    identity_links: Mapped[list[ProfessionalIdentity]] = relationship(
+        back_populates="professional", cascade="all, delete-orphan"
+    )
+
+
+class ProfessionalIdentity(Base):
+    """Связывать все встреченные ID источника с одной карточкой мастера."""
+
+    __tablename__ = "professional_identities"
+    __table_args__ = (
+        Index("ix_professional_identities_professional_id", "professional_id"),
+        {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_unicode_ci"},
+    )
+
+    source: Mapped[str] = mapped_column(String(64), primary_key=True)
+    source_profile_id: Mapped[str] = mapped_column(SOURCE_PROFILE_ID_TYPE, primary_key=True)
+    professional_id: Mapped[int] = mapped_column(
+        ForeignKey("professionals.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utcnow)
+
+    professional: Mapped[Professional] = relationship(back_populates="identity_links")
 
 
 class Category(Base):

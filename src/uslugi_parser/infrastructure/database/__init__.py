@@ -12,8 +12,10 @@ from uslugi_parser.infrastructure.database.models import (
     Professional,
     ProfessionalCategory,
     ProfessionalCategoryRubric,
+    ProfessionalIdentity,
 )
 from uslugi_parser.infrastructure.database.repositories import (
+    IdentityConflictError,
     ParserLogRepository,
     ParserSettingRepository,
     ProfessionalRepository,
@@ -22,6 +24,7 @@ from uslugi_parser.infrastructure.database.repositories import (
 __all__ = [
     "Base",
     "Category",
+    "IdentityConflictError",
     "ParserLog",
     "ParserLogRepository",
     "ParserSetting",
@@ -29,6 +32,7 @@ __all__ = [
     "Professional",
     "ProfessionalCategory",
     "ProfessionalCategoryRubric",
+    "ProfessionalIdentity",
     "ProfessionalRepository",
     "make_engine",
     "make_session_factory",

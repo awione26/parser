@@ -22,7 +22,8 @@ Laravel 13 / AdminLTE 3 интерфейс для просмотра данны�
   записями.
 
 Таблицы `professionals`, `categories`, `professional_categories`,
-`professional_category_rubrics`, `logs` и `settings` принадлежат Alembic/Python.
+`professional_category_rubrics`, `professional_identities`, `logs` и `settings`
+принадлежат Alembic/Python.
 Laravel не создаёт и не изменяет их схему или поля карточек, но администратор может
 удалить профиль целиком, просматривать журнал запусков и менять только фиксированный
 whitelist из одиннадцати `SCRAPER_*` параметров. Настройки применяются при следующем

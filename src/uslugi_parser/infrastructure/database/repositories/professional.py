@@ -6,7 +6,7 @@ import hashlib
 import json
 from typing import Literal
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -18,8 +18,14 @@ from uslugi_parser.infrastructure.database.models import (
     Professional,
     ProfessionalCategory,
     ProfessionalCategoryRubric,
+    ProfessionalIdentity,
     utcnow,
 )
+from uslugi_parser.parsing.urls import canonicalize_profile_url
+
+
+class IdentityConflictError(RuntimeError):
+    """Сообщать, что id и URL профиля указывают на разные строки мастеров."""
 
 
 def _content_hash(profile: ParsedProfessional) -> str:
@@ -36,6 +42,25 @@ def _content_hash(profile: ParsedProfessional) -> str:
         separators=(",", ":"),
     )
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _professional_identity(profile: ParsedProfessional) -> tuple[str, str, str, str]:
+    """Нормализовать источник и получить устойчивый ключ мастера.
+
+    Основным ключом служит идентификатор, выданный источником. Хеш канонического
+    URL — дополнительный ключ, который защищает от смены формата исходного id.
+    """
+
+    source = profile.source.strip().lower()
+    if not source:
+        raise ValueError("professional source must not be empty")
+
+    canonical_url = canonicalize_profile_url(profile.profile_url)
+    source_profile_id = profile.source_profile_id.strip()
+    if not source_profile_id:
+        raise ValueError("professional source_profile_id must not be empty")
+    profile_url_hash = hashlib.sha256(canonical_url.encode("utf-8")).hexdigest()
+    return source, source_profile_id, canonical_url, profile_url_hash
 
 
 class ProfessionalRepository:
@@ -77,20 +102,40 @@ class ProfessionalRepository:
         """Выполнить одну транзакционную попытку сохранения связанного графа."""
 
         now = utcnow()
+        source, source_profile_id, profile_url, profile_url_hash = _professional_identity(profile)
         with self.session_factory.begin() as session:
-            professional = session.scalar(
-                select(Professional).where(
-                    Professional.source == profile.source,
-                    Professional.source_profile_id == profile.source_profile_id,
+            identity_professional_id = session.scalar(
+                select(ProfessionalIdentity.professional_id).where(
+                    ProfessionalIdentity.source == source,
+                    ProfessionalIdentity.source_profile_id == source_profile_id,
                 )
             )
+            identity_predicates = [
+                Professional.source_profile_id == source_profile_id,
+                Professional.profile_url_hash == profile_url_hash,
+            ]
+            if identity_professional_id is not None:
+                identity_predicates.append(Professional.id == identity_professional_id)
+            matches = session.scalars(
+                select(Professional).where(
+                    Professional.source == source,
+                    or_(*identity_predicates),
+                )
+            ).all()
+            if len(matches) > 1:
+                raise IdentityConflictError(
+                    "source_profile_id and canonical profile URL belong to different "
+                    "professional rows"
+                )
+            professional = matches[0] if matches else None
             outcome: Literal["created", "updated"]
             normalized_phone = _normalized_phone(profile.phone, profile.country)
             if professional is None:
                 professional = Professional(
-                    source=profile.source,
-                    source_profile_id=profile.source_profile_id,
-                    profile_url=profile.profile_url,
+                    source=source,
+                    source_profile_id=source_profile_id,
+                    profile_url=profile_url,
+                    profile_url_hash=profile_url_hash,
                     full_name=profile.full_name,
                     phone=normalized_phone,
                     phone_status=profile.phone_status,
@@ -114,7 +159,8 @@ class ProfessionalRepository:
                 session.flush()
                 outcome = "created"
             else:
-                professional.profile_url = profile.profile_url
+                professional.profile_url = profile_url
+                professional.profile_url_hash = profile_url_hash
                 professional.full_name = profile.full_name
                 professional.city = profile.city
                 professional.region = profile.region
@@ -138,6 +184,24 @@ class ProfessionalRepository:
                     professional.phone = None
                     professional.phone_status = profile.phone_status
                 outcome = "updated"
+
+            identity = session.get(
+                ProfessionalIdentity,
+                {"source": source, "source_profile_id": source_profile_id},
+            )
+            if identity is None:
+                session.add(
+                    ProfessionalIdentity(
+                        source=source,
+                        source_profile_id=source_profile_id,
+                        professional_id=professional.id,
+                        created_at=now,
+                    )
+                )
+            elif identity.professional_id != professional.id:
+                raise IdentityConflictError(
+                    "source_profile_id alias belongs to another professional row"
+                )
 
             category = session.scalar(
                 select(Category).where(Category.key == category_definition.key)

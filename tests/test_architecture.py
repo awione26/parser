@@ -135,6 +135,10 @@ def test_runtime_roles_have_minimal_parser_log_grants() -> None:
     assert (
         "GRANT SELECT, INSERT, UPDATE ON ${database}.logs TO 'uslugi_parser'@'%';" in grant_script
     )
+    assert (
+        "GRANT SELECT, INSERT ON ${database}.professional_identities "
+        "TO 'uslugi_parser'@'%';" in grant_script
+    )
     assert "GRANT SELECT ON ${database}.logs TO 'uslugi_admin'@'%';" in grant_script
     assert "DELETE ON ${database}.logs" not in grant_script
 

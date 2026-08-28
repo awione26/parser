@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+import hashlib
 import os
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
-from datetime import date
+from dataclasses import replace
+from datetime import date, datetime
 from pathlib import Path
 from threading import Barrier
 
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import func, inspect, select, text
+from sqlalchemy import event, func, inspect, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import DBAPIError
 
@@ -22,6 +24,7 @@ from uslugi_parser.infrastructure.database import (
     Professional,
     ProfessionalCategory,
     ProfessionalCategoryRubric,
+    ProfessionalIdentity,
     ProfessionalRepository,
     make_engine,
     make_session_factory,
@@ -82,6 +85,26 @@ def test_mysql_migration_plaintext_concurrent_upsert_and_cascade() -> None:
     alembic_config.set_main_option("script_location", str(root / "migrations"))
     engine = None
     with migration_environment(database_url):
+        command.upgrade(alembic_config, "20260827_05")
+        pre_upgrade_engine = make_engine(database_url)
+        try:
+            now = datetime(2026, 8, 27, 12, 0, 0)
+            with pre_upgrade_engine.begin() as connection:
+                connection.execute(
+                    text(
+                        "INSERT INTO professionals ("
+                        "source, source_profile_id, profile_url, phone_status, age_as_of, "
+                        "content_hash, parser_version, first_seen_at, last_seen_at, "
+                        "last_scraped_at) VALUES ("
+                        "'uslugi.yandex.ru', 'legacy-identity', "
+                        "'https://uslugi.yandex.ru/profile/Legacy-1?from=search', "
+                        "'not_requested', '2026-08-27', :content_hash, '0.1.0', "
+                        ":now, :now, :now)"
+                    ),
+                    {"content_hash": "9" * 64, "now": now},
+                )
+        finally:
+            pre_upgrade_engine.dispose()
         command.upgrade(alembic_config, "head")
         try:
             command.check(alembic_config)
@@ -101,8 +124,39 @@ def test_mysql_migration_plaintext_concurrent_upsert_and_cascade() -> None:
                     ),
                     {"schema": parsed_url.database},
                 )
+                identity_collation = session.scalar(
+                    text(
+                        "SELECT table_collation FROM information_schema.tables "
+                        "WHERE table_schema = :schema "
+                        "AND table_name = 'professional_identities'"
+                    ),
+                    {"schema": parsed_url.database},
+                )
             assert settings == SCRAPER_SETTING_DEFAULTS
             assert collation == "utf8mb4_bin"
+            assert identity_collation == "utf8mb4_unicode_ci"
+            canonical_legacy_url = "https://uslugi.yandex.ru/profile/Legacy-1"
+            with sessions.begin() as session:
+                legacy = session.scalar(
+                    select(Professional).where(Professional.source_profile_id == "legacy-identity")
+                )
+                assert legacy is not None
+                assert legacy.profile_url == canonical_legacy_url
+                assert (
+                    legacy.profile_url_hash
+                    == hashlib.sha256(canonical_legacy_url.encode("utf-8")).hexdigest()
+                )
+                assert (
+                    session.get(
+                        ProfessionalIdentity,
+                        {
+                            "source": "uslugi.yandex.ru",
+                            "source_profile_id": "legacy-identity",
+                        },
+                    )
+                    is not None
+                )
+                session.delete(legacy)
 
             for invalid_key in ("SCRAPER_UNKNOWN", "scraper_geo"):
                 with pytest.raises(DBAPIError):
@@ -118,22 +172,49 @@ def test_mysql_migration_plaintext_concurrent_upsert_and_cascade() -> None:
                 experience_code=5,
             )
             barrier = Barrier(2)
+            session_class = sessions.class_
 
-            def writer() -> str:
-                barrier.wait(timeout=10)
+            def synchronize_competing_inserts(session, flush_context, instances) -> None:
+                del flush_context, instances
+                if any(isinstance(item, Professional) for item in session.new):
+                    barrier.wait(timeout=10)
+
+            source_ids = ("mysql-concurrency-id-a", "mysql-concurrency-id-b")
+
+            def writer(source_profile_id: str) -> str:
                 return ProfessionalRepository(sessions).upsert(
-                    mysql_profile(), DEFAULT_CATEGORIES["plumbers"], evidence
+                    replace(mysql_profile(), source_profile_id=source_profile_id),
+                    DEFAULT_CATEGORIES["plumbers"],
+                    evidence,
                 )
 
-            with ThreadPoolExecutor(max_workers=2) as executor:
-                outcomes = list(executor.map(lambda _: writer(), range(2)))
+            event.listen(session_class, "before_flush", synchronize_competing_inserts)
+            try:
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    outcomes = list(executor.map(writer, source_ids))
+            finally:
+                event.remove(session_class, "before_flush", synchronize_competing_inserts)
             assert sorted(outcomes) == ["created", "updated"]
+            assert (
+                ProfessionalRepository(sessions).upsert(
+                    replace(
+                        mysql_profile(),
+                        source_profile_id=source_ids[1].upper(),
+                        profile_url="https://uslugi.yandex.ru/profile/MySqlContract-Renamed",
+                    ),
+                    DEFAULT_CATEGORIES["plumbers"],
+                    evidence,
+                )
+                == "updated"
+            )
 
             with sessions() as session:
                 professional = session.scalar(select(Professional))
                 assert professional is not None
+                assert professional.source_profile_id in source_ids
                 assert professional.phone == "+79990000000"
                 assert session.scalar(select(func.count(Professional.id))) == 1
+                assert session.scalar(select(func.count(ProfessionalIdentity.professional_id))) == 2
                 assert session.scalar(select(func.count(ProfessionalCategory.professional_id))) == 1
                 assert (
                     session.scalar(select(func.count(ProfessionalCategoryRubric.professional_id)))
@@ -145,6 +226,7 @@ def test_mysql_migration_plaintext_concurrent_upsert_and_cascade() -> None:
                 assert professional is not None
                 session.delete(professional)
             with sessions() as session:
+                assert session.scalar(select(func.count(ProfessionalIdentity.professional_id))) == 0
                 assert session.scalar(select(func.count(ProfessionalCategory.professional_id))) == 0
                 assert (
                     session.scalar(select(func.count(ProfessionalCategoryRubric.professional_id)))

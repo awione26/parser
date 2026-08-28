@@ -62,6 +62,7 @@ REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'uslugi_parser'@'%';
 REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'uslugi_admin'@'%';
 
 GRANT SELECT, INSERT, UPDATE ON ${database}.professionals TO 'uslugi_parser'@'%';
+GRANT SELECT, INSERT ON ${database}.professional_identities TO 'uslugi_parser'@'%';
 GRANT SELECT, INSERT, UPDATE ON ${database}.categories TO 'uslugi_parser'@'%';
 GRANT SELECT, INSERT, UPDATE ON ${database}.professional_categories TO 'uslugi_parser'@'%';
 GRANT SELECT, INSERT, UPDATE ON ${database}.professional_category_rubrics TO 'uslugi_parser'@'%';
@@ -70,6 +71,7 @@ GRANT SELECT ON ${database}.settings TO 'uslugi_parser'@'%';
 GRANT SELECT ON ${database}.alembic_version TO 'uslugi_parser'@'%';
 
 GRANT SELECT, DELETE ON ${database}.professionals TO 'uslugi_admin'@'%';
+GRANT SELECT ON ${database}.professional_identities TO 'uslugi_admin'@'%';
 GRANT SELECT ON ${database}.categories TO 'uslugi_admin'@'%';
 GRANT SELECT ON ${database}.professional_categories TO 'uslugi_admin'@'%';
 GRANT SELECT ON ${database}.professional_category_rubrics TO 'uslugi_admin'@'%';

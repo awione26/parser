@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 
 import pytest
@@ -10,11 +11,13 @@ from uslugi_parser.catalog.categories import DEFAULT_CATEGORIES
 from uslugi_parser.domain import ParsedProfessional, RubricEvidence
 from uslugi_parser.infrastructure.database import (
     Base,
+    IdentityConflictError,
     ParserSetting,
     ParserSettingRepository,
     Professional,
     ProfessionalCategory,
     ProfessionalCategoryRubric,
+    ProfessionalIdentity,
     ProfessionalRepository,
     make_session_factory,
 )
@@ -159,6 +162,204 @@ def test_repository_retries_a_unique_constraint_race(monkeypatch) -> None:
         == "created"
     )
     assert calls == 2
+
+
+def test_repository_deduplicates_changed_source_id_by_canonical_url() -> None:
+    """Сохранить одну строку при смене id у того же канонического URL."""
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    sessions = make_session_factory(engine)
+    repository = ProfessionalRepository(sessions)
+    base_profile = make_profile(phone=None, phone_status="not_requested")
+
+    first = replace(
+        base_profile,
+        source_profile_id="old-stable-id",
+        profile_url="https://uslugi.yandex.ru/profile/Test-123?from=search#reviews",
+    )
+    second = replace(
+        base_profile,
+        source_profile_id="new-stable-id",
+        profile_url="https://uslugi.yandex.ru/profile/Test-123?utm_source=repeat",
+    )
+
+    assert repository.upsert(first, DEFAULT_CATEGORIES["plumbers"]) == "created"
+    assert repository.upsert(second, DEFAULT_CATEGORIES["electricians"]) == "updated"
+
+    with sessions() as session:
+        professional = session.scalar(select(Professional))
+        assert professional is not None
+        assert professional.source_profile_id == "old-stable-id"
+        assert professional.profile_url == "https://uslugi.yandex.ru/profile/Test-123"
+        assert session.query(Professional).count() == 1
+        assert session.query(ProfessionalIdentity).count() == 2
+        assert session.query(ProfessionalCategory).count() == 2
+
+
+def test_repository_remembers_all_source_id_aliases_after_url_changes() -> None:
+    """Не создать дубль после последовательной смены и ID, и URL профиля."""
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    sessions = make_session_factory(engine)
+    repository = ProfessionalRepository(sessions)
+    profile = make_profile(phone=None, phone_status="not_requested")
+
+    for source_profile_id, profile_url in (
+        ("stable-a", "https://uslugi.yandex.ru/profile/Master-X"),
+        ("stable-b", "https://uslugi.yandex.ru/profile/Master-X"),
+        ("stable-a", "https://uslugi.yandex.ru/profile/Master-Y"),
+        ("stable-b", "https://uslugi.yandex.ru/profile/Master-Z"),
+        ("STABLE-B", "https://uslugi.yandex.ru/profile/Master-W"),
+    ):
+        repository.upsert(
+            replace(
+                profile,
+                source_profile_id=source_profile_id,
+                profile_url=profile_url,
+            ),
+            DEFAULT_CATEGORIES["plumbers"],
+        )
+
+    with sessions() as session:
+        professional = session.scalar(select(Professional))
+        assert professional is not None
+        assert professional.profile_url == "https://uslugi.yandex.ru/profile/Master-W"
+        assert session.query(Professional).count() == 1
+        assert session.query(ProfessionalIdentity).count() == 2
+
+
+def test_repository_repeated_profile_preserves_one_row_and_first_seen() -> None:
+    """Повторный парсинг обновляет существующую строку, не создавая новую."""
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    sessions = make_session_factory(engine)
+    repository = ProfessionalRepository(sessions)
+    profile = make_profile(phone=None, phone_status="not_requested")
+
+    assert repository.upsert(profile, DEFAULT_CATEGORIES["plumbers"]) == "created"
+    with sessions() as session:
+        original = session.scalar(select(Professional))
+        assert original is not None
+        original_id = original.id
+        original_first_seen = original.first_seen_at
+
+    assert repository.upsert(profile, DEFAULT_CATEGORIES["plumbers"]) == "updated"
+    with sessions() as session:
+        repeated = session.scalar(select(Professional))
+        assert repeated is not None
+        assert repeated.id == original_id
+        assert repeated.first_seen_at == original_first_seen
+        assert session.query(Professional).count() == 1
+        assert session.query(ProfessionalCategory).count() == 1
+
+
+def test_repository_does_not_merge_distinct_ids_by_name_or_phone() -> None:
+    """Не считать тёзок или общий телефон достаточными признаками одного мастера."""
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    sessions = make_session_factory(engine)
+    repository = ProfessionalRepository(sessions)
+    profile = make_profile(phone="+79991234567", phone_status="public_profile")
+
+    repository.upsert(
+        replace(
+            profile,
+            source_profile_id="stable-a",
+            profile_url="https://uslugi.yandex.ru/profile/Master-A-1",
+        ),
+        DEFAULT_CATEGORIES["plumbers"],
+    )
+    repository.upsert(
+        replace(
+            profile,
+            source_profile_id="stable-b",
+            profile_url="https://uslugi.yandex.ru/profile/Master-B-2",
+        ),
+        DEFAULT_CATEGORIES["plumbers"],
+    )
+
+    with sessions() as session:
+        assert session.query(Professional).count() == 2
+
+
+@pytest.mark.parametrize("source_profile_id", ["", "   "])
+def test_repository_rejects_missing_stable_source_id(source_profile_id: str) -> None:
+    """Не сохранять карточку без обязательного стабильного id источника."""
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    repository = ProfessionalRepository(make_session_factory(engine))
+    profile = replace(
+        make_profile(phone=None, phone_status="not_requested"),
+        source_profile_id=source_profile_id,
+    )
+
+    with pytest.raises(ValueError, match="source_profile_id must not be empty"):
+        repository.upsert(profile, DEFAULT_CATEGORIES["plumbers"])
+
+
+def test_repository_rejects_conflicting_id_and_canonical_url() -> None:
+    """Не объединять молча две строки при противоречащих ключах идентичности."""
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    sessions = make_session_factory(engine)
+    repository = ProfessionalRepository(sessions)
+    base_profile = make_profile(phone=None, phone_status="not_requested")
+    first = replace(
+        base_profile,
+        source_profile_id="stable-a",
+        profile_url="https://uslugi.yandex.ru/profile/Master-A-1",
+    )
+    second = replace(
+        base_profile,
+        source_profile_id="stable-b",
+        profile_url="https://uslugi.yandex.ru/profile/Master-B-2",
+    )
+
+    repository.upsert(first, DEFAULT_CATEGORIES["plumbers"])
+    repository.upsert(second, DEFAULT_CATEGORIES["electricians"])
+
+    with pytest.raises(IdentityConflictError, match="belong to different"):
+        repository.upsert(
+            replace(first, profile_url=second.profile_url),
+            DEFAULT_CATEGORIES["designers"],
+        )
+
+    with sessions() as session:
+        assert session.query(Professional).count() == 2
+        assert session.query(ProfessionalCategory).count() == 2
+
+
+def test_repository_normalizes_stable_identity_parts() -> None:
+    """Пробелы и регистр источника не должны создавать повторную запись."""
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    sessions = make_session_factory(engine)
+    repository = ProfessionalRepository(sessions)
+    base_profile = make_profile(phone=None, phone_status="not_requested")
+
+    assert (
+        repository.upsert(
+            replace(base_profile, source=" USLUGI.YANDEX.RU ", source_profile_id=" 123 "),
+            DEFAULT_CATEGORIES["plumbers"],
+        )
+        == "created"
+    )
+    assert repository.upsert(base_profile, DEFAULT_CATEGORIES["electricians"]) == "updated"
+
+    with sessions() as session:
+        professional = session.scalar(select(Professional))
+        assert professional is not None
+        assert professional.source == "uslugi.yandex.ru"
+        assert professional.source_profile_id == "123"
+        assert session.query(Professional).count() == 1
+        assert session.query(ProfessionalCategory).count() == 2
 
 
 def test_setting_repository_reads_key_value_rows_without_writing() -> None:
