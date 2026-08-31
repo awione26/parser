@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DataTableController;
+use App\Http\Controllers\Admin\ParserCategoryController;
 use App\Http\Controllers\Admin\ParserLogController;
 use App\Http\Controllers\Admin\ParserSettingController;
 use App\Http\Controllers\Admin\PhoneController;
@@ -31,6 +32,27 @@ Route::middleware('auth')->group(function (): void {
             ->name('admin.settings.index');
         Route::put('settings', [ParserSettingController::class, 'update'])
             ->name('admin.settings.update');
+
+        Route::prefix('categories')->group(function (): void {
+            Route::get('', [ParserCategoryController::class, 'index'])
+                ->name('admin.categories.index');
+            Route::get('create', [ParserCategoryController::class, 'create'])
+                ->name('admin.categories.create');
+            Route::post('', [ParserCategoryController::class, 'store'])
+                ->name('admin.categories.store');
+            Route::get('{parserCategory}/edit', [ParserCategoryController::class, 'edit'])
+                ->whereNumber('parserCategory')
+                ->name('admin.categories.edit');
+            Route::put('{parserCategory}', [ParserCategoryController::class, 'update'])
+                ->whereNumber('parserCategory')
+                ->name('admin.categories.update');
+            Route::patch('{parserCategory}/activation', [ParserCategoryController::class, 'activation'])
+                ->whereNumber('parserCategory')
+                ->name('admin.categories.activation');
+            Route::delete('{parserCategory}', [ParserCategoryController::class, 'destroy'])
+                ->whereNumber('parserCategory')
+                ->name('admin.categories.destroy');
+        });
     });
 
     Route::get('professionals', [ProfessionalController::class, 'index'])

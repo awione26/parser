@@ -4,10 +4,16 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 BASE_URL = "https://uslugi.yandex.ru"
 GEO_SLUG_PATTERN = re.compile(r"^[0-9]+-[a-z0-9]+(?:-[a-z0-9]+)*$")
+CATEGORY_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+SEED_RUBRIC_PATTERN = re.compile(
+    r"(?:[a-z0-9]+(?:-[a-z0-9]+)*/)*"
+    r"[a-z0-9]+(?:-[a-z0-9]+)*--([1-9][0-9]*)$"
+)
+RESERVED_PARSER_CATEGORY_KEYS = frozenset({"all", "manual"})
 
 
 def validate_geo_slug(geo: str) -> str:
@@ -30,12 +36,116 @@ class CategoryDefinition:
     seed_paths: tuple[str, ...]
     note: str = ""
 
+    def __post_init__(self) -> None:
+        """Проверить идентификатор, название и безопасные относительные пути категории."""
+
+        validate_category_key(self.key)
+        validate_category_name(self.name)
+        if not isinstance(self.seed_paths, tuple):
+            raise TypeError("category seed_paths must be a tuple")
+
+        seen_paths: set[str] = set()
+        seen_rubric_ids: set[int] = set()
+        for path in self.seed_paths:
+            rubric_id = validate_seed_path(path)
+            if path in seen_paths:
+                raise ValueError(f"duplicate category seed path: {path!r}")
+            if rubric_id in seen_rubric_ids:
+                raise ValueError(f"duplicate rubric id in category seed paths: {rubric_id}")
+            seen_paths.add(path)
+            seen_rubric_ids.add(rubric_id)
+
+        if not isinstance(self.note, str):
+            raise TypeError("category note must be a string")
+
     def urls(self, geo: str) -> tuple[str, ...]:
         """Строит абсолютные URL исходных рубрик для проверенного geo slug в заданном порядке."""
 
         geo = validate_geo_slug(geo)
         prefix = f"/{geo}/category/"
         return tuple(urljoin(BASE_URL, prefix + path.lstrip("/")) for path in self.seed_paths)
+
+
+def validate_category_key(key: str) -> str:
+    """Проверить неизменяемый ASCII-ключ категории и вернуть его без нормализации."""
+
+    if not isinstance(key, str):
+        raise TypeError("category key must be a string")
+    if not CATEGORY_KEY_PATTERN.fullmatch(key):
+        raise ValueError(
+            "category key must start with a lowercase ASCII letter and contain only "
+            "lowercase ASCII letters, digits, and underscores"
+        )
+    return key
+
+
+def validate_category_name(name: str) -> str:
+    """Проверить непустое отображаемое название категории без скрытой нормализации."""
+
+    if not isinstance(name, str):
+        raise TypeError("category name must be a string")
+    if not name or name != name.strip() or len(name) > 255:
+        raise ValueError("category name must be non-empty, trimmed, and at most 255 characters")
+    if any(ord(character) < 32 for character in name):
+        raise ValueError("category name must not contain control characters")
+    return name
+
+
+def validate_seed_path(path: str) -> int:
+    """Проверить безопасный относительный путь рубрики и вернуть её числовой ID."""
+
+    if not isinstance(path, str):
+        raise TypeError("category seed path must be a string")
+    if not path or path != path.strip() or len(path) > 1024:
+        raise ValueError(
+            "category seed path must be non-empty, trimmed, and at most 1024 characters"
+        )
+    parsed = urlsplit(path)
+    if (
+        parsed.scheme
+        or parsed.netloc
+        or parsed.query
+        or parsed.fragment
+        or path.startswith("/")
+        or "\\" in path
+    ):
+        raise ValueError("category seed path must be a relative URL path without query or fragment")
+    segments = path.split("/")
+    if any(segment in {"", ".", ".."} for segment in segments):
+        raise ValueError("category seed path must not contain empty, dot, or parent segments")
+    match = SEED_RUBRIC_PATTERN.fullmatch(path)
+    if match is None:
+        raise ValueError(
+            "category seed path must contain lowercase slug segments and end with "
+            "'--<positive rubric id>'"
+        )
+    return int(match.group(1))
+
+
+def validate_category_definitions(
+    categories: list[CategoryDefinition] | tuple[CategoryDefinition, ...],
+    *,
+    require_seed_paths: bool = True,
+) -> None:
+    """Проверить уникальность ключей, путей и ID рубрик во всём наборе категорий."""
+
+    seen_keys: set[str] = set()
+    seen_paths: set[str] = set()
+    seen_rubric_ids: set[int] = set()
+    for category in categories:
+        if require_seed_paths and not category.seed_paths:
+            raise ValueError(f"category {category.key!r} must have at least one seed path")
+        if category.key in seen_keys:
+            raise ValueError(f"duplicate category key: {category.key!r}")
+        seen_keys.add(category.key)
+        for path in category.seed_paths:
+            rubric_id = validate_seed_path(path)
+            if path in seen_paths:
+                raise ValueError(f"duplicate seed path across categories: {path!r}")
+            if rubric_id in seen_rubric_ids:
+                raise ValueError(f"duplicate rubric id across categories: {rubric_id}")
+            seen_paths.add(path)
+            seen_rubric_ids.add(rubric_id)
 
 
 DEFAULT_CATEGORIES: dict[str, CategoryDefinition] = {
@@ -66,22 +176,22 @@ DEFAULT_CATEGORIES: dict[str, CategoryDefinition] = {
     ),
     "plumbers": CategoryDefinition(
         key="plumbers",
-        name="Сантехники",
+        name="Сантехник",
         seed_paths=("remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie--1844",),
     ),
     "electricians": CategoryDefinition(
         key="electricians",
-        name="Электрики",
+        name="Электрик",
         seed_paths=("remont-i-stroitelstvo/elektromontazhnyie-rabotyi--2007",),
     ),
     "carpenters": CategoryDefinition(
         key="carpenters",
-        name="Плотники",
+        name="Плотник",
         seed_paths=("remont-i-stroitelstvo/stoljarnye-i-plotnitskie-raboty--5788",),
     ),
     "furniture_assemblers": CategoryDefinition(
         key="furniture_assemblers",
-        name="Сборщики мебели",
+        name="Сборщик мебели",
         seed_paths=(
             "remont-i-stroitelstvo/mebel/sborka-mebeli--4638",
             "remont-i-stroitelstvo/sborka-i-remont-mebeli/sborka-komplekta-mebeli--5954",
@@ -95,7 +205,7 @@ DEFAULT_CATEGORIES: dict[str, CategoryDefinition] = {
     ),
     "finishers": CategoryDefinition(
         key="finishers",
-        name="Отделочники",
+        name="Отделочник",
         seed_paths=(
             "remont-i-stroitelstvo/remont-kvartir-i-domov/chistovaya-otdelka--1827",
             "remont-i-stroitelstvo/remont-kvartir-i-domov/chernovaya-otdelka--1826",
@@ -115,7 +225,7 @@ DEFAULT_CATEGORIES: dict[str, CategoryDefinition] = {
     ),
     "appliance_repair": CategoryDefinition(
         key="appliance_repair",
-        name="Мастера по ремонту бытовой техники",
+        name="Мастер по ремонту бытовой техники",
         seed_paths=(
             "remont-i-ustanovka-tehniki/stiralnyie-mashinyi/remont-stiralnoj-mashinyi--4023",
             "remont-i-ustanovka-tehniki/posudomoechnyie-mashinyi/"
@@ -135,7 +245,7 @@ DEFAULT_CATEGORIES: dict[str, CategoryDefinition] = {
     ),
     "window_repair": CategoryDefinition(
         key="window_repair",
-        name="Мастера по ремонту окон",
+        name="Мастер по ремонту окон",
         seed_paths=(
             "remont-i-stroitelstvo/okna-i-balkonyi/remont-okon--1725",
             "remont-i-stroitelstvo/okna-i-balkonyi/zamena-stekol--1715",
@@ -151,7 +261,7 @@ DEFAULT_CATEGORIES: dict[str, CategoryDefinition] = {
     ),
     "locks_and_doors": CategoryDefinition(
         key="locks_and_doors",
-        name="Мастера по замкам и дверям",
+        name="Мастер по замкам и дверям",
         seed_paths=(
             "remont-i-stroitelstvo/dveri-i-zamki/remont-zamka--5320",
             "remont-i-stroitelstvo/remont-i-ustanovka-zamkov/"
@@ -174,10 +284,12 @@ DEFAULT_CATEGORIES: dict[str, CategoryDefinition] = {
     ),
     "low_voltage": CategoryDefinition(
         key="low_voltage",
-        name="Мастера по слаботочным системам",
+        name="Мастер по слаботочным системам",
         seed_paths=("remont-i-stroitelstvo/slabotochnye-sistemy--5784",),
     ),
 }
+
+validate_category_definitions(tuple(DEFAULT_CATEGORIES.values()))
 
 
 def select_categories(keys: list[str] | None) -> list[CategoryDefinition]:

@@ -15,13 +15,13 @@ from uslugi_parser.application import (
     parse_saved_profile,
     save_profile,
 )
-from uslugi_parser.catalog.categories import (
-    DEFAULT_CATEGORIES,
-    select_categories,
-)
+from uslugi_parser.catalog import CategoryDefinition
 from uslugi_parser.config import Settings
 from uslugi_parser.infrastructure.browser.phone_collector import PhoneCollector
 from uslugi_parser.infrastructure.database.connection import make_engine, make_session_factory
+from uslugi_parser.infrastructure.database.repositories.parser_category import (
+    ParserCategoryRepository,
+)
 from uslugi_parser.infrastructure.database.repositories.parser_log import (
     ParserLogRepository,
 )
@@ -44,6 +44,27 @@ def _repository(settings: Settings) -> ProfessionalRepository:
 
     engine = make_engine(settings.database_url)
     return ProfessionalRepository(make_session_factory(engine))
+
+
+def _category_repository(settings: Settings) -> ParserCategoryRepository:
+    """Создать read-only репозиторий управляемых категорий парсинга."""
+
+    engine = make_engine(settings.database_url)
+    return ParserCategoryRepository(make_session_factory(engine))
+
+
+def _resolve_save_category(
+    settings: Settings,
+    category_key: str | None,
+) -> CategoryDefinition | None:
+    """До разбора карточки разрешить один активный ключ категории из БД."""
+
+    if category_key is None:
+        return None
+    categories = _category_repository(settings).resolve([category_key])
+    if len(categories) != 1:
+        raise ValueError("named save must resolve exactly one parser category")
+    return categories[0]
 
 
 def _parser_run_service(settings: Settings) -> ParserRunService:
@@ -97,7 +118,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="original profile URL; a single worker can also be selected without it",
     )
     parse_html.add_argument("--save", action="store_true", help="upsert the result into MySQL")
-    parse_html.add_argument("--category", choices=sorted(DEFAULT_CATEGORIES))
+    parse_html.add_argument("--category")
 
     parse_profile = commands.add_parser("parse-profile", help="fetch and parse one live profile")
     parse_profile.add_argument("url")
@@ -114,7 +135,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     profile_phone_group.set_defaults(collect_phone=None)
     parse_profile.add_argument("--save", action="store_true", help="upsert the result into MySQL")
-    parse_profile.add_argument("--category", choices=sorted(DEFAULT_CATEGORIES))
+    parse_profile.add_argument("--category")
     parse_profile.add_argument(
         "--no-respect-robots",
         action="store_true",
@@ -125,8 +146,7 @@ def _build_parser() -> argparse.ArgumentParser:
     crawl_parser.add_argument(
         "--category",
         action="append",
-        choices=["all", *sorted(DEFAULT_CATEGORIES)],
-        help="repeatable; defaults to all",
+        help="repeatable database category key; defaults to all active categories",
     )
     crawl_parser.add_argument("--geo", help="Yandex geo slug, for example 213-moscow")
     crawl_parser.add_argument(
@@ -175,7 +195,7 @@ def _run_categories(settings: Settings) -> int:
     """Показать настроенные категории и их стартовые URL."""
 
     rows = []
-    for category in DEFAULT_CATEGORIES.values():
+    for category in _category_repository(settings).list_active():
         rows.append(
             {
                 "key": category.key,
@@ -191,10 +211,11 @@ def _run_categories(settings: Settings) -> int:
 def _run_parse_html(args: argparse.Namespace, settings: Settings) -> int:
     """Разобрать сохранённый HTML и при необходимости записать профиль в БД."""
 
+    category = _resolve_save_category(settings, args.category) if args.save else None
     html = args.file.read_text(encoding="utf-8")
     profile = parse_saved_profile(html, args.source_url, settings)
     if args.save:
-        outcome = save_profile(_repository(settings), profile, args.category)
+        outcome = save_profile(_repository(settings), profile, category)
         result = profile.public_dict()
         result["database"] = outcome
         _json_dump(result)
@@ -206,6 +227,7 @@ def _run_parse_html(args: argparse.Namespace, settings: Settings) -> int:
 async def _run_parse_profile(args: argparse.Namespace, settings: Settings) -> int:
     """Выполнить команду загрузки и разбора одной карточки мастера."""
 
+    category = _resolve_save_category(settings, args.category) if args.save else None
     if args.no_respect_robots:
         settings = settings.with_overrides(respect_robots=False)
         logger.warning("robots_policy_override_enabled")
@@ -219,7 +241,7 @@ async def _run_parse_profile(args: argparse.Namespace, settings: Settings) -> in
     )
     result = profile.public_dict()
     if args.save:
-        result["database"] = save_profile(_repository(settings), profile, args.category)
+        result["database"] = save_profile(_repository(settings), profile, category)
     _json_dump(result)
     return 0
 
@@ -237,7 +259,7 @@ async def _run_crawl(args: argparse.Namespace, settings: Settings) -> int:
     if not settings.respect_robots:
         logger.warning("robots_policy_override_enabled")
     collect_phone = settings.collect_phone if args.collect_phone is None else args.collect_phone
-    categories = select_categories(args.category)
+    categories = _category_repository(settings).resolve(args.category)
     repository = None if args.dry_run else _repository(settings)
     stats = await crawl(
         settings=settings,

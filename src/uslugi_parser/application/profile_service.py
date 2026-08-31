@@ -10,7 +10,7 @@ from uslugi_parser.application.dto import (
     ProfessionalWriter,
     ProfileOptions,
 )
-from uslugi_parser.catalog.categories import DEFAULT_CATEGORIES, CategoryDefinition
+from uslugi_parser.catalog.categories import CategoryDefinition
 from uslugi_parser.config import Settings
 from uslugi_parser.domain import ParsedProfessional
 from uslugi_parser.exceptions import (
@@ -57,7 +57,7 @@ def parse_saved_profile(
 def save_profile(
     repository: ProfessionalWriter,
     profile: ParsedProfessional,
-    category_key: str | None,
+    category: CategoryDefinition | None,
 ) -> str:
     """Сохранить профиль только при точном совпадении с выбранной рубрикой.
 
@@ -65,12 +65,8 @@ def save_profile(
     категории функция находит все подтверждающие рубрики исходного профиля.
     """
 
-    if category_key is None:
+    if category is None:
         return repository.upsert(profile, MANUAL_CATEGORY)
-    try:
-        category = DEFAULT_CATEGORIES[category_key]
-    except KeyError as exc:
-        raise ConfigurationError(f"Unknown category: {category_key}") from exc
     evidences = [
         evidence
         for path in category.seed_paths

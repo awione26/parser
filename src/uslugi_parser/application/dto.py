@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from typing import Protocol, TypeAlias
@@ -79,5 +79,14 @@ class ProfessionalWriter(Protocol):
         evidence: RubricEvidence | None = None,
     ) -> str:
         """Создать или обновить мастера и вернуть результат операции."""
+
+        ...
+
+
+class ParserCategoryReader(Protocol):
+    """Задаёт интерфейс разрешения управляемых категорий без привязки к БД."""
+
+    def resolve(self, keys: Sequence[str] | None) -> list[CategoryDefinition]:
+        """Вернуть активные категории для `all` либо проверить явные ключи."""
 
         ...

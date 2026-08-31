@@ -5,7 +5,9 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -189,6 +191,38 @@ class Category(Base):
     professional_links: Mapped[list[ProfessionalCategory]] = relationship(
         back_populates="category", cascade="all, delete-orphan"
     )
+    parser_config: Mapped[ParserCategory | None] = relationship(
+        back_populates="category",
+        uselist=False,
+    )
+
+
+class ParserCategory(Base):
+    """Хранить управляемую конфигурацию обхода одной основной категории."""
+
+    __tablename__ = "parser_categories"
+    __table_args__ = (
+        CheckConstraint("sort_order >= 0", name="ck_parser_categories_sort_order"),
+        Index(
+            "ix_parser_categories_active_order",
+            "is_active",
+            "sort_order",
+            "category_id",
+        ),
+        {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_unicode_ci"},
+    )
+
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("categories.id", ondelete="RESTRICT"),
+        primary_key=True,
+    )
+    seed_paths: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utcnow)
+
+    category: Mapped[Category] = relationship(back_populates="parser_config")
 
 
 class ProfessionalCategory(Base):

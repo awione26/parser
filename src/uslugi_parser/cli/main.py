@@ -90,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
     _configure_logging(args.verbose)
     try:
         settings = _load_effective_settings(
-            allow_environment_fallback=args.command in {"categories", "parse-html"}
+            allow_environment_fallback=args.command == "parse-html" and not args.save
         )
         if args.command == "categories":
             return _run_categories(settings)

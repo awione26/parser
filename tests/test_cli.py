@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import logging
 from collections.abc import Callable
@@ -13,6 +14,7 @@ from sqlalchemy.exc import OperationalError
 import uslugi_parser.cli.commands as cli_commands
 import uslugi_parser.cli.main as cli_main
 from uslugi_parser.application import save_profile
+from uslugi_parser.catalog import DEFAULT_CATEGORIES
 from uslugi_parser.cli.commands import _build_parser, _run_parse_html, _run_parse_profile
 from uslugi_parser.config import Settings
 from uslugi_parser.config.settings import SCRAPER_SETTING_DEFAULTS
@@ -100,10 +102,10 @@ def test_named_category_save_requires_exact_profile_rubric() -> None:
         "https://uslugi.yandex.ru/profile/TestMaster-123456",
     )
     repository = RecordingRepository()
-    assert save_profile(repository, profile, "plumbers") == "created"
+    assert save_profile(repository, profile, DEFAULT_CATEGORIES["plumbers"]) == "created"
     assert repository.evidence_ids == [1844]
     with pytest.raises(ConfigurationError, match="no exact rubric match"):
-        save_profile(repository, profile, "appliance_repair")
+        save_profile(repository, profile, DEFAULT_CATEGORIES["appliance_repair"])
 
 
 @pytest.mark.parametrize(
@@ -149,9 +151,111 @@ def test_categories_command_does_not_create_parser_run_log(
         raise AssertionError("categories must not create a parser run log")
 
     monkeypatch.setattr(cli_main, "_parser_run_service", unexpected_service)
+    monkeypatch.setattr(
+        cli_commands,
+        "_category_repository",
+        lambda _settings: StaticCategoryRepository(),
+    )
 
     assert cli_main.main(["categories"]) == 0
     assert json.loads(capsys.readouterr().out)
+
+
+class StaticCategoryRepository:
+    """Возвращать один проверенный снимок категории без настоящей БД."""
+
+    def list_active(self):
+        """Вернуть активную тестовую категорию."""
+
+        return [DEFAULT_CATEGORIES["plumbers"]]
+
+    def resolve(self, _keys):
+        """Разрешить выбор в ту же тестовую категорию."""
+
+        return self.list_active()
+
+
+class RejectingCategoryRepository:
+    """Имитировать fail-closed разрешение категории до сетевых операций."""
+
+    def resolve(self, _keys):
+        """Сообщить, что выбранная категория выключена."""
+
+        raise ConfigurationError("Inactive parser categories: disabled")
+
+
+def test_parse_profile_resolves_category_before_network(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Не загружать карточку при неизвестной или выключенной категории save."""
+
+    network_called = False
+
+    async def forbidden_network(*_args, **_kwargs):
+        """Зафиксировать ошибочный сетевой вызов."""
+
+        nonlocal network_called
+        network_called = True
+        raise AssertionError("network must not be called")
+
+    monkeypatch.setattr(
+        cli_commands,
+        "_category_repository",
+        lambda _settings: RejectingCategoryRepository(),
+    )
+    monkeypatch.setattr(cli_commands, "parse_live_profile", forbidden_network)
+    args = argparse.Namespace(
+        url="https://uslugi.yandex.ru/profile/Test-1",
+        save=True,
+        category="disabled",
+        no_respect_robots=False,
+        collect_phone=None,
+    )
+
+    with pytest.raises(ConfigurationError, match="Inactive parser categories"):
+        asyncio.run(_run_parse_profile(args, cli_settings()))
+    assert network_called is False
+
+
+def test_crawl_resolves_categories_before_network(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Не создавать HTTP-сценарий crawl при недопустимом выборе категории."""
+
+    network_called = False
+
+    async def forbidden_crawl(*_args, **_kwargs):
+        """Зафиксировать ошибочный запуск сетевого сценария."""
+
+        nonlocal network_called
+        network_called = True
+        raise AssertionError("crawl must not be called")
+
+    monkeypatch.setattr(
+        cli_commands,
+        "_category_repository",
+        lambda _settings: RejectingCategoryRepository(),
+    )
+    monkeypatch.setattr(cli_commands, "crawl", forbidden_crawl)
+    args = argparse.Namespace(
+        category=["disabled"],
+        geo=None,
+        respect_robots=None,
+        collect_phone=None,
+        dry_run=True,
+        max_pages=1,
+        max_profiles=1,
+    )
+
+    with pytest.raises(ConfigurationError, match="Inactive parser categories"):
+        asyncio.run(cli_commands._run_crawl(args, cli_settings()))
+    assert network_called is False
+
+
+def test_cli_accepts_database_category_key_without_static_choices() -> None:
+    """Передать новый DB-ключ в resolver вместо раннего отказа argparse."""
+
+    args = _build_parser().parse_args(["crawl", "--category", "future_category"])
+
+    assert args.category == ["future_category"]
 
 
 def test_cli_database_settings_override_environment(monkeypatch: pytest.MonkeyPatch) -> None:

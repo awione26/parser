@@ -20,6 +20,9 @@ from uslugi_parser.catalog.categories import DEFAULT_CATEGORIES
 from uslugi_parser.config.settings import SCRAPER_SETTING_DEFAULTS
 from uslugi_parser.domain import ParsedProfessional, RubricEvidence
 from uslugi_parser.infrastructure.database import (
+    Category,
+    ParserCategory,
+    ParserCategoryRepository,
     ParserSetting,
     Professional,
     ProfessionalCategory,
@@ -132,9 +135,23 @@ def test_mysql_migration_plaintext_concurrent_upsert_and_cascade() -> None:
                     ),
                     {"schema": parsed_url.database},
                 )
+                parser_category_collation = session.scalar(
+                    text(
+                        "SELECT table_collation FROM information_schema.tables "
+                        "WHERE table_schema = :schema "
+                        "AND table_name = 'parser_categories'"
+                    ),
+                    {"schema": parsed_url.database},
+                )
             assert settings == SCRAPER_SETTING_DEFAULTS
             assert collation == "utf8mb4_bin"
             assert identity_collation == "utf8mb4_unicode_ci"
+            assert parser_category_collation == "utf8mb4_unicode_ci"
+            database_categories = ParserCategoryRepository(sessions).list_active()
+            assert database_categories == list(DEFAULT_CATEGORIES.values())
+            with sessions() as session:
+                assert session.scalar(select(func.count(Category.id))) == 11
+                assert session.scalar(select(func.count(ParserCategory.category_id))) == 11
             canonical_legacy_url = "https://uslugi.yandex.ru/profile/Legacy-1"
             with sessions.begin() as session:
                 legacy = session.scalar(

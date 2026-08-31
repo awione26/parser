@@ -38,6 +38,19 @@ trait CreatesParserSchema
             $table->timestamps();
         });
 
+        $schema->create('parser_categories', function (Blueprint $table): void {
+            $table->unsignedBigInteger('category_id')->primary();
+            $table->json('seed_paths');
+            $table->boolean('is_active')->default(true);
+            $table->integer('sort_order')->default(0);
+            $table->timestamps();
+            $table->index(['is_active', 'sort_order', 'category_id']);
+            $table->foreign('category_id')
+                ->references('id')
+                ->on('categories')
+                ->restrictOnDelete();
+        });
+
         $schema->create('professionals', function (Blueprint $table): void {
             $table->id();
             $table->string('source');

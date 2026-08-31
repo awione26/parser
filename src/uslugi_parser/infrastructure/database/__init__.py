@@ -7,6 +7,7 @@ from uslugi_parser.infrastructure.database.connection import (
 from uslugi_parser.infrastructure.database.models import (
     Base,
     Category,
+    ParserCategory,
     ParserLog,
     ParserSetting,
     Professional,
@@ -16,6 +17,7 @@ from uslugi_parser.infrastructure.database.models import (
 )
 from uslugi_parser.infrastructure.database.repositories import (
     IdentityConflictError,
+    ParserCategoryRepository,
     ParserLogRepository,
     ParserSettingRepository,
     ProfessionalRepository,
@@ -29,6 +31,8 @@ __all__ = [
     "ParserLogRepository",
     "ParserSetting",
     "ParserSettingRepository",
+    "ParserCategory",
+    "ParserCategoryRepository",
     "Professional",
     "ProfessionalCategory",
     "ProfessionalCategoryRubric",

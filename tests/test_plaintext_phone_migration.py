@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import date, datetime
 from io import StringIO
 from pathlib import Path
@@ -10,13 +11,14 @@ from alembic import command
 from alembic.config import Config
 from cryptography.fernet import Fernet
 
+from uslugi_parser.catalog import DEFAULT_CATEGORIES
 from uslugi_parser.config.settings import SCRAPER_SETTING_DEFAULTS
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE_REVISION = "20260820_01"
 LEGACY_REVISION = "20260826_02"
 SETTINGS_REVISION = "20260827_05"
-HEAD_REVISION = "20260827_06"
+HEAD_REVISION = "20260831_07"
 
 
 def alembic_config(*, output_buffer: StringIO | None = None) -> Config:
@@ -147,6 +149,47 @@ def settings_schema_state(database_url: str) -> tuple[set[str], dict[str, str]]:
         engine.dispose()
 
 
+def parser_category_schema_state(
+    database_url: str,
+) -> tuple[set[str], set[str], list[tuple[str, str, list[str], bool, int]]]:
+    """Вернуть схему и упорядоченный снимок категорий парсинга."""
+
+    engine = sa.create_engine(database_url)
+    try:
+        inspector = sa.inspect(engine)
+        columns = {str(column["name"]) for column in inspector.get_columns("parser_categories")}
+        indexes = {
+            str(index["name"])
+            for index in inspector.get_indexes("parser_categories")
+            if index.get("name")
+        }
+        with engine.connect() as connection:
+            rows = connection.execute(
+                sa.text(
+                    "SELECT c.`key`, c.name, pc.seed_paths, pc.is_active, pc.sort_order "
+                    "FROM parser_categories pc "
+                    "JOIN categories c ON c.id = pc.category_id "
+                    "ORDER BY pc.sort_order, pc.category_id"
+                )
+            ).all()
+        return (
+            columns,
+            indexes,
+            [
+                (
+                    str(key),
+                    str(name),
+                    list(json.loads(str(seed_paths))),
+                    bool(is_active),
+                    int(sort_order),
+                )
+                for key, name, seed_paths, is_active, sort_order in rows
+            ],
+        )
+    finally:
+        engine.dispose()
+
+
 def professional_category_indexes(database_url: str) -> set[str]:
     """Вернуть имена индексов таблицы связей мастеров и категорий."""
 
@@ -246,6 +289,26 @@ def test_fresh_upgrade_creates_plaintext_schema_without_legacy_key(
     setting_columns, setting_rows = settings_schema_state(database_url)
     assert setting_columns == {"key", "value", "created_at", "updated_at"}
     assert setting_rows == SCRAPER_SETTING_DEFAULTS
+    parser_columns, parser_indexes, parser_rows = parser_category_schema_state(database_url)
+    assert parser_columns == {
+        "category_id",
+        "seed_paths",
+        "is_active",
+        "sort_order",
+        "created_at",
+        "updated_at",
+    }
+    assert parser_indexes == {"ix_parser_categories_active_order"}
+    assert parser_rows == [
+        (
+            definition.key,
+            definition.name,
+            list(definition.seed_paths),
+            True,
+            position * 10,
+        )
+        for position, definition in enumerate(DEFAULT_CATEGORIES.values(), start=1)
+    ]
 
 
 def test_upgrade_decrypts_legacy_phone_then_drops_legacy_columns(
@@ -291,6 +354,99 @@ def test_upgrade_decrypts_legacy_phone_then_drops_legacy_columns(
         with engine.connect() as connection:
             ciphertext = connection.scalar(sa.text("SELECT phone_ciphertext FROM professionals"))
         assert Fernet(key).decrypt(str(ciphertext).encode("ascii")).decode("utf-8") == phone
+    finally:
+        engine.dispose()
+
+
+def test_category_upgrade_preserves_existing_master_id_and_professional_link(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Синхронизировать master-строку без удаления её ID и исторической связи."""
+
+    database_url = sqlite_url(tmp_path / "category-preservation.sqlite")
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    command.upgrade(alembic_config(), "20260827_06")
+    engine = sa.create_engine(database_url)
+    now = datetime(2026, 8, 31, 12, 0, 0)
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                sa.text(
+                    "INSERT INTO categories "
+                    "(id, `key`, name, note, created_at, updated_at) VALUES "
+                    "(777, 'designers', 'Старое название', 'old', :now, :now)"
+                ),
+                {"now": now},
+            )
+            connection.execute(
+                sa.text(
+                    "INSERT INTO professionals ("
+                    "id, source, source_profile_id, profile_url, profile_url_hash, "
+                    "phone_status, age_as_of, content_hash, parser_version, "
+                    "first_seen_at, last_seen_at, last_scraped_at) VALUES ("
+                    "888, 'uslugi.yandex.ru', 'category-preservation', "
+                    "'https://uslugi.yandex.ru/profile/Category-1', :url_hash, "
+                    "'not_requested', '2026-08-31', :content_hash, '0.1.0', "
+                    ":now, :now, :now)"
+                ),
+                {"url_hash": "a" * 64, "content_hash": "b" * 64, "now": now},
+            )
+            connection.execute(
+                sa.text(
+                    "INSERT INTO professional_categories "
+                    "(professional_id, category_id, first_seen_at, last_seen_at) "
+                    "VALUES (888, 777, :now, :now)"
+                ),
+                {"now": now},
+            )
+    finally:
+        engine.dispose()
+
+    command.upgrade(alembic_config(), "head")
+
+    engine = sa.create_engine(database_url)
+    try:
+        with engine.connect() as connection:
+            category = connection.execute(
+                sa.text("SELECT id, name FROM categories WHERE `key` = 'designers'")
+            ).one()
+            config_category_id = connection.scalar(
+                sa.text(
+                    "SELECT pc.category_id FROM parser_categories pc "
+                    "JOIN categories c ON c.id = pc.category_id "
+                    "WHERE c.`key` = 'designers'"
+                )
+            )
+            link_count = connection.scalar(
+                sa.text(
+                    "SELECT COUNT(*) FROM professional_categories "
+                    "WHERE professional_id = 888 AND category_id = 777"
+                )
+            )
+            assert connection.scalar(sa.text("SELECT COUNT(*) FROM categories")) == 11
+            assert connection.scalar(sa.text("SELECT COUNT(*) FROM parser_categories")) == 11
+        assert category == (777, "Дизайнеры")
+        assert config_category_id == 777
+        assert link_count == 1
+    finally:
+        engine.dispose()
+
+    command.downgrade(alembic_config(), "20260827_06")
+    engine = sa.create_engine(database_url)
+    try:
+        inspector = sa.inspect(engine)
+        assert "parser_categories" not in inspector.get_table_names()
+        with engine.connect() as connection:
+            assert (
+                connection.scalar(
+                    sa.text(
+                        "SELECT COUNT(*) FROM professional_categories "
+                        "WHERE professional_id = 888 AND category_id = 777"
+                    )
+                )
+                == 1
+            )
     finally:
         engine.dispose()
 
@@ -352,6 +508,7 @@ def test_full_offline_sql_contains_plaintext_schema(monkeypatch: pytest.MonkeyPa
     command.upgrade(alembic_config(output_buffer=output), "head", sql=True)
 
     sql = output.getvalue()
+    assert ":param_" not in sql
     assert "ADD COLUMN phone VARCHAR(32)" in sql
     assert "CREATE INDEX ix_professionals_phone ON professionals (phone)" in sql
     assert "DROP COLUMN phone_ciphertext" in sql
@@ -369,6 +526,11 @@ def test_full_offline_sql_contains_plaintext_schema(monkeypatch: pytest.MonkeyPa
     assert "CONSTRAINT ck_professionals_source_profile_id_not_blank CHECK" in sql
     assert "CREATE TABLE professional_identities" in sql
     assert "fk_professional_identities_professional_id" in sql
+    assert "CREATE TABLE parser_categories" in sql
+    assert "fk_parser_categories_category_id" in sql
+    assert "CREATE INDEX ix_parser_categories_active_order" in sql
+    assert sql.count("INSERT INTO categories") == len(DEFAULT_CATEGORIES)
+    assert sql.count("INSERT INTO parser_categories") == len(DEFAULT_CATEGORIES)
 
 
 def test_identity_upgrade_rejects_existing_duplicate_canonical_urls(

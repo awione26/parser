@@ -5,9 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
- * Read-only category maintained by the Python parser.
+ * Общая категория мастеров, используемая парсером и его конфигурацией.
  */
 class Category extends Model
 {
@@ -51,6 +52,16 @@ class Category extends Model
     public function rubrics(): HasMany
     {
         return $this->hasMany(ProfessionalCategoryRubric::class, 'category_id');
+    }
+
+    /**
+     * Вернуть настройки обхода этой категории, если она добавлена в план парсинга.
+     *
+     * @return HasOne<ParserCategory, $this>
+     */
+    public function parserConfiguration(): HasOne
+    {
+        return $this->hasOne(ParserCategory::class, 'category_id');
     }
 
     /**

@@ -94,6 +94,12 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a href="{{ route('admin.categories.index') }}" class="nav-link{{ Request::is('cp/categories*') ? ' active' : '' }}">
+                                <i class="nav-icon fas fa-list-alt" aria-hidden="true"></i>
+                                <p>Категории</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a href="{{ route('admin.settings.index') }}" class="nav-link{{ Request::is('cp/settings*') ? ' active' : '' }}">
                                 <i class="nav-icon fas fa-cogs" aria-hidden="true"></i>
                                 <p>Настройки</p>
