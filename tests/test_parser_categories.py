@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 import pytest
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import create_engine, delete, func, select
 
 from uslugi_parser.catalog import DEFAULT_CATEGORIES, CategoryDefinition
 from uslugi_parser.exceptions import ConfigurationError
@@ -12,8 +12,10 @@ from uslugi_parser.infrastructure.database import (
     Category,
     ParserCategory,
     ParserCategoryRepository,
+    ParserCategoryTarget,
     make_session_factory,
 )
+from uslugi_parser.parsing import seed_number_id
 
 
 def configured_repository(
@@ -41,6 +43,18 @@ def configured_repository(
                     sort_order=sort_order,
                 )
             )
+            session.flush()
+            for position, path in enumerate(definition.seed_paths, start=1):
+                session.add(
+                    ParserCategoryTarget(
+                        category_id=category.id,
+                        taxonomy_level="unknown",
+                        source_rubric_number_id=seed_number_id(path),
+                        relative_path=path,
+                        is_active=True,
+                        sort_order=position * 10,
+                    )
+                )
     return ParserCategoryRepository(sessions), sessions
 
 
@@ -128,22 +142,34 @@ def test_repository_rejects_reserved_database_category_key() -> None:
         repository.list_active()
 
 
-def test_repository_rejects_empty_or_unsafe_json_paths() -> None:
-    """Не строить HTTP-запросы из пустого либо небезопасного JSON БД."""
+def test_repository_rejects_empty_or_unsafe_crawl_targets() -> None:
+    """Не строить HTTP-запросы из пустых либо небезопасных целей обхода БД."""
 
     repository, sessions = configured_repository([(DEFAULT_CATEGORIES["plumbers"], True, 10)])
     with sessions.begin() as session:
-        config = session.scalar(select(ParserCategory))
-        assert config is not None
-        config.seed_paths = []
-    with pytest.raises(ConfigurationError, match="non-empty JSON array"):
+        session.execute(delete(ParserCategoryTarget))
+    with pytest.raises(ConfigurationError, match="at least one active crawl target"):
         repository.list_active()
 
+    repository, sessions = configured_repository([(DEFAULT_CATEGORIES["plumbers"], True, 10)])
     with sessions.begin() as session:
-        config = session.scalar(select(ParserCategory))
-        assert config is not None
-        config.seed_paths = ["https://evil.example/category--1"]
+        target = session.scalar(select(ParserCategoryTarget))
+        assert target is not None
+        target.relative_path = "https://evil.example/category--1"
     with pytest.raises(ConfigurationError, match="relative URL path"):
+        repository.list_active()
+
+
+def test_repository_rejects_target_id_that_does_not_match_path() -> None:
+    """Не отправлять запрос, если нормализованный ID расходится с URL цели."""
+
+    repository, sessions = configured_repository([(DEFAULT_CATEGORIES["plumbers"], True, 10)])
+    with sessions.begin() as session:
+        target = session.scalar(select(ParserCategoryTarget))
+        assert target is not None
+        target.source_rubric_number_id += 1
+
+    with pytest.raises(ConfigurationError, match="does not match path ID"):
         repository.list_active()
 
 

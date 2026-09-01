@@ -18,7 +18,10 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE_REVISION = "20260820_01"
 LEGACY_REVISION = "20260826_02"
 SETTINGS_REVISION = "20260827_05"
-HEAD_REVISION = "20260831_07"
+HEAD_REVISION = "20260901_09"
+TAXONOMY_SNAPSHOT = json.loads(
+    (ROOT / "migrations/data/20260901_yandex_taxonomy.json").read_text(encoding="utf-8")
+)
 
 
 def alembic_config(*, output_buffer: StringIO | None = None) -> Config:
@@ -190,6 +193,72 @@ def parser_category_schema_state(
         engine.dispose()
 
 
+def taxonomy_schema_state(database_url: str) -> tuple[dict[str, int], int, int]:
+    """Вернуть количества справочников, связей и активных целей обхода."""
+
+    engine = sa.create_engine(database_url)
+    table_names = (
+        "yandex_occupations",
+        "yandex_specializations",
+        "yandex_services",
+        "category_yandex_occupations",
+        "category_yandex_specializations",
+        "category_yandex_services",
+        "parser_category_targets",
+    )
+    try:
+        with engine.connect() as connection:
+            counts = {
+                table_name: int(
+                    connection.scalar(sa.text(f"SELECT COUNT(*) FROM {table_name}")) or 0
+                )
+                for table_name in table_names
+            }
+            invalid_urls = int(
+                connection.scalar(
+                    sa.text(
+                        "SELECT COUNT(*) FROM ("
+                        "SELECT source_url FROM yandex_occupations UNION ALL "
+                        "SELECT source_url FROM yandex_specializations UNION ALL "
+                        "SELECT source_url FROM yandex_services"
+                        ") AS taxonomy_urls WHERE source_url IS NOT NULL "
+                        "AND source_url NOT LIKE 'https://uslugi.yandex.ru/%'"
+                    )
+                )
+                or 0
+            )
+            unresolved_with_id = int(
+                connection.scalar(
+                    sa.text(
+                        "SELECT COUNT(*) FROM yandex_services "
+                        "WHERE verification_status = 'unverified' "
+                        "AND (external_id_raw IS NOT NULL OR external_number_id IS NOT NULL "
+                        "OR slug IS NOT NULL OR source_url IS NOT NULL)"
+                    )
+                )
+                or 0
+            )
+        return counts, invalid_urls, unresolved_with_id
+    finally:
+        engine.dispose()
+
+
+def category_metadata_state(database_url: str) -> dict[str, tuple[str, str | None]]:
+    """Вернуть отображаемые названия и примечания встроенных категорий."""
+
+    engine = sa.create_engine(database_url)
+    try:
+        with engine.connect() as connection:
+            rows = connection.execute(
+                sa.text("SELECT `key`, name, note FROM categories ORDER BY `key`")
+            ).all()
+        return {
+            str(key): (str(name), None if note is None else str(note)) for key, name, note in rows
+        }
+    finally:
+        engine.dispose()
+
+
 def professional_category_indexes(database_url: str) -> set[str]:
     """Вернуть имена индексов таблицы связей мастеров и категорий."""
 
@@ -309,6 +378,26 @@ def test_fresh_upgrade_creates_plaintext_schema_without_legacy_key(
         )
         for position, definition in enumerate(DEFAULT_CATEGORIES.values(), start=1)
     ]
+    taxonomy_counts, invalid_urls, unresolved_with_id = taxonomy_schema_state(database_url)
+    assert taxonomy_counts == {
+        "yandex_occupations": len(TAXONOMY_SNAPSHOT["yandex_occupations"]),
+        "yandex_specializations": len(TAXONOMY_SNAPSHOT["yandex_specializations"]),
+        "yandex_services": len(TAXONOMY_SNAPSHOT["yandex_services"]),
+        "category_yandex_occupations": sum(
+            len(group["occupation_ids"]) for group in TAXONOMY_SNAPSHOT["groups"]
+        ),
+        "category_yandex_specializations": sum(
+            len(group["specialization_ids"]) for group in TAXONOMY_SNAPSHOT["groups"]
+        ),
+        "category_yandex_services": 171,
+        "parser_category_targets": 34,
+    }
+    assert invalid_urls == 0
+    assert unresolved_with_id == 0
+    assert category_metadata_state(database_url) == {
+        definition.key: (definition.name, definition.note or None)
+        for definition in DEFAULT_CATEGORIES.values()
+    }
 
 
 def test_upgrade_decrypts_legacy_phone_then_drops_legacy_columns(
@@ -451,6 +540,97 @@ def test_category_upgrade_preserves_existing_master_id_and_professional_link(
         engine.dispose()
 
 
+def test_taxonomy_upgrade_skips_builtin_category_without_parser_config(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Не нарушать FK, если администратор ранее удалил встроенную конфигурацию."""
+
+    database_url = sqlite_url(tmp_path / "taxonomy-missing-config.sqlite")
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    command.upgrade(alembic_config(), "20260831_07")
+    engine = sa.create_engine(database_url)
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                sa.text(
+                    "DELETE FROM parser_categories WHERE category_id = "
+                    "(SELECT id FROM categories WHERE `key` = 'designers')"
+                )
+            )
+    finally:
+        engine.dispose()
+
+    command.upgrade(alembic_config(), "head")
+
+    engine = sa.create_engine(database_url)
+    try:
+        with engine.connect() as connection:
+            assert connection.scalar(sa.text("SELECT COUNT(*) FROM parser_categories")) == 10
+            assert (
+                connection.scalar(
+                    sa.text(
+                        "SELECT COUNT(*) FROM parser_category_targets target "
+                        "JOIN categories category ON category.id = target.category_id "
+                        "WHERE category.`key` = 'designers'"
+                    )
+                )
+                == 0
+            )
+            assert connection.scalar(sa.text("SELECT COUNT(*) FROM parser_category_targets")) == 33
+    finally:
+        engine.dispose()
+
+
+def test_taxonomy_upgrade_backfills_custom_parser_category(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Сохранить пользовательские категории при переходе с JSON на targets."""
+
+    database_url = sqlite_url(tmp_path / "taxonomy-custom-config.sqlite")
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    command.upgrade(alembic_config(), "20260831_07")
+    engine = sa.create_engine(database_url)
+    now = datetime(2026, 9, 1, 10, 0, 0)
+    custom_path = "remont-i-stroitelstvo/polzovatelskaya-rubrika--999999"
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                sa.text(
+                    "INSERT INTO categories "
+                    "(id, `key`, name, note, created_at, updated_at) VALUES "
+                    "(999, 'custom_category', 'Пользовательская категория', NULL, :now, :now)"
+                ),
+                {"now": now},
+            )
+            connection.execute(
+                sa.text(
+                    "INSERT INTO parser_categories "
+                    "(category_id, seed_paths, is_active, sort_order, created_at, updated_at) "
+                    "VALUES (999, :seed_paths, 1, 999, :now, :now)"
+                ),
+                {"seed_paths": json.dumps([custom_path]), "now": now},
+            )
+    finally:
+        engine.dispose()
+
+    command.upgrade(alembic_config(), "head")
+
+    engine = sa.create_engine(database_url)
+    try:
+        with engine.connect() as connection:
+            target = connection.execute(
+                sa.text(
+                    "SELECT taxonomy_level, source_rubric_number_id, relative_path "
+                    "FROM parser_category_targets WHERE category_id = 999"
+                )
+            ).one()
+        assert target == ("unknown", 999999, custom_path)
+    finally:
+        engine.dispose()
+
+
 def test_upgrade_fails_before_ddl_when_legacy_key_is_missing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -529,8 +709,15 @@ def test_full_offline_sql_contains_plaintext_schema(monkeypatch: pytest.MonkeyPa
     assert "CREATE TABLE parser_categories" in sql
     assert "fk_parser_categories_category_id" in sql
     assert "CREATE INDEX ix_parser_categories_active_order" in sql
-    assert sql.count("INSERT INTO categories") == len(DEFAULT_CATEGORIES)
+    # Ревизия 07 создаёт master-строки, а 09 повторно синхронизирует их описания.
+    assert sql.count("INSERT INTO categories") == len(DEFAULT_CATEGORIES) * 2
     assert sql.count("INSERT INTO parser_categories") == len(DEFAULT_CATEGORIES)
+    assert "CREATE TABLE yandex_occupations" in sql
+    assert "CREATE TABLE yandex_specializations" in sql
+    assert "CREATE TABLE yandex_services" in sql
+    assert "CREATE TABLE parser_category_targets" in sql
+    assert "CREATE TABLE category_yandex_services" in sql
+    assert "yabs.yandex.ru" not in sql
 
 
 def test_identity_upgrade_rejects_existing_duplicate_canonical_urls(

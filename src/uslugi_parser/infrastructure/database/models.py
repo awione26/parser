@@ -223,6 +223,215 @@ class ParserCategory(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utcnow)
 
     category: Mapped[Category] = relationship(back_populates="parser_config")
+    targets: Mapped[list[ParserCategoryTarget]] = relationship(
+        back_populates="parser_config",
+        cascade="all, delete-orphan",
+    )
+
+
+class ParserCategoryTarget(Base):
+    """Хранить один проверенный путь рубрики, который парсер реально обходит."""
+
+    __tablename__ = "parser_category_targets"
+    __table_args__ = (
+        UniqueConstraint(
+            "category_id",
+            "source_rubric_number_id",
+            name="uq_parser_category_targets_category_rubric",
+        ),
+        CheckConstraint("sort_order >= 0", name="ck_parser_category_targets_sort_order"),
+        CheckConstraint(
+            "taxonomy_level IN ('occupation', 'specialization', 'service', 'unknown')",
+            name="ck_parser_category_targets_level",
+        ),
+        Index(
+            "ix_parser_category_targets_category_order",
+            "category_id",
+            "is_active",
+            "sort_order",
+            "id",
+        ),
+        {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_bin"},
+    )
+
+    id: Mapped[int] = mapped_column(PRIMARY_KEY_TYPE, primary_key=True, autoincrement=True)
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("parser_categories.category_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    taxonomy_level: Mapped[str] = mapped_column(String(16), nullable=False, default="unknown")
+    source_rubric_number_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    relative_path: Mapped[str] = mapped_column(String(512), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utcnow)
+
+    parser_config: Mapped[ParserCategory] = relationship(back_populates="targets")
+
+
+class YandexOccupation(Base):
+    """Описывать верхний уровень официального каталога Яндекс Услуг."""
+
+    __tablename__ = "yandex_occupations"
+    __table_args__ = (
+        CheckConstraint(
+            "verification_status IN ('confirmed', 'discovered', 'legacy', 'unverified')",
+            name="ck_yandex_occupations_verification_status",
+        ),
+        UniqueConstraint(
+            "external_number_id",
+            name="uq_yandex_occupations_external_number_id",
+        ),
+        Index("ix_yandex_occupations_name", "name"),
+        {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_unicode_ci"},
+    )
+
+    id: Mapped[int] = mapped_column(PRIMARY_KEY_TYPE, primary_key=True, autoincrement=True)
+    external_id_raw: Mapped[str | None] = mapped_column(String(255))
+    external_number_id: Mapped[int | None] = mapped_column(Integer)
+    slug: Mapped[str | None] = mapped_column(String(512))
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_url: Mapped[str | None] = mapped_column(String(1024))
+    verification_status: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utcnow)
+
+
+class YandexSpecialization(Base):
+    """Описывать специализацию Яндекса и её подтверждённое направление."""
+
+    __tablename__ = "yandex_specializations"
+    __table_args__ = (
+        CheckConstraint(
+            "verification_status IN ('confirmed', 'discovered', 'legacy', 'unverified')",
+            name="ck_yandex_specializations_verification_status",
+        ),
+        UniqueConstraint(
+            "external_number_id",
+            name="uq_yandex_specializations_external_number_id",
+        ),
+        Index("ix_yandex_specializations_occupation_id", "occupation_id"),
+        Index("ix_yandex_specializations_name", "name"),
+        {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_unicode_ci"},
+    )
+
+    id: Mapped[int] = mapped_column(PRIMARY_KEY_TYPE, primary_key=True, autoincrement=True)
+    occupation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("yandex_occupations.id", ondelete="RESTRICT")
+    )
+    external_id_raw: Mapped[str | None] = mapped_column(String(255))
+    external_number_id: Mapped[int | None] = mapped_column(Integer)
+    slug: Mapped[str | None] = mapped_column(String(512))
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_url: Mapped[str | None] = mapped_column(String(1024))
+    verification_status: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utcnow)
+
+
+class YandexService(Base):
+    """Описывать услугу Яндекса, не выдумывая отсутствующие в источнике ID."""
+
+    __tablename__ = "yandex_services"
+    __table_args__ = (
+        CheckConstraint(
+            "verification_status IN ('confirmed', 'discovered', 'legacy', 'unverified')",
+            name="ck_yandex_services_verification_status",
+        ),
+        UniqueConstraint(
+            "external_number_id",
+            name="uq_yandex_services_external_number_id",
+        ),
+        Index("ix_yandex_services_specialization_id", "specialization_id"),
+        Index("ix_yandex_services_name", "name"),
+        {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_unicode_ci"},
+    )
+
+    id: Mapped[int] = mapped_column(PRIMARY_KEY_TYPE, primary_key=True, autoincrement=True)
+    specialization_id: Mapped[int | None] = mapped_column(
+        ForeignKey("yandex_specializations.id", ondelete="RESTRICT")
+    )
+    external_id_raw: Mapped[str | None] = mapped_column(String(255))
+    external_number_id: Mapped[int | None] = mapped_column(Integer)
+    slug: Mapped[str | None] = mapped_column(String(512))
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_url: Mapped[str | None] = mapped_column(String(1024))
+    verification_status: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utcnow)
+
+
+class CategoryYandexOccupation(Base):
+    """Связывать внутреннюю группу мастеров с направлением Яндекса."""
+
+    __tablename__ = "category_yandex_occupations"
+    __table_args__ = (
+        CheckConstraint("sort_order >= 0", name="ck_category_yandex_occupations_sort_order"),
+        Index(
+            "ix_category_yandex_occupations_occupation_id",
+            "occupation_id",
+            "category_id",
+        ),
+        {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_unicode_ci"},
+    )
+
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("categories.id", ondelete="RESTRICT"), primary_key=True
+    )
+    occupation_id: Mapped[int] = mapped_column(
+        ForeignKey("yandex_occupations.id", ondelete="RESTRICT"), primary_key=True
+    )
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class CategoryYandexSpecialization(Base):
+    """Связывать внутреннюю группу мастеров со специализацией Яндекса."""
+
+    __tablename__ = "category_yandex_specializations"
+    __table_args__ = (
+        CheckConstraint(
+            "sort_order >= 0",
+            name="ck_category_yandex_specializations_sort_order",
+        ),
+        Index(
+            "ix_category_yandex_specializations_specialization_id",
+            "specialization_id",
+            "category_id",
+        ),
+        {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_unicode_ci"},
+    )
+
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("categories.id", ondelete="RESTRICT"), primary_key=True
+    )
+    specialization_id: Mapped[int] = mapped_column(
+        ForeignKey("yandex_specializations.id", ondelete="RESTRICT"), primary_key=True
+    )
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class CategoryYandexService(Base):
+    """Связывать внутреннюю группу мастеров с услугой из приложенного справочника."""
+
+    __tablename__ = "category_yandex_services"
+    __table_args__ = (
+        CheckConstraint("sort_order >= 0", name="ck_category_yandex_services_sort_order"),
+        Index(
+            "ix_category_yandex_services_service_id",
+            "service_id",
+            "category_id",
+        ),
+        {"mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_unicode_ci"},
+    )
+
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("categories.id", ondelete="RESTRICT"), primary_key=True
+    )
+    service_id: Mapped[int] = mapped_column(
+        ForeignKey("yandex_services.id", ondelete="RESTRICT"), primary_key=True
+    )
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
 class ProfessionalCategory(Base):
@@ -273,6 +482,7 @@ class ProfessionalCategoryRubric(Base):
     professional_id: Mapped[int] = mapped_column(PRIMARY_KEY_TYPE, primary_key=True)
     category_id: Mapped[int] = mapped_column(PRIMARY_KEY_TYPE, primary_key=True)
     source_rubric_number_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_rubric_level: Mapped[str | None] = mapped_column(String(16))
     source_rubric_id: Mapped[str | None] = mapped_column(String(255))
     source_rubric_seo_id: Mapped[str | None] = mapped_column(String(255))
     source_rubric_name: Mapped[str | None] = mapped_column(String(255))

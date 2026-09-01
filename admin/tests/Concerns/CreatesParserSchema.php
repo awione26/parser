@@ -51,6 +51,92 @@ trait CreatesParserSchema
                 ->restrictOnDelete();
         });
 
+        $schema->create('yandex_occupations', function (Blueprint $table): void {
+            $table->id();
+            $table->string('external_id_raw')->nullable();
+            $table->integer('external_number_id')->nullable()->unique();
+            $table->string('slug', 512)->nullable();
+            $table->string('name');
+            $table->string('source_url', 1024)->nullable();
+            $table->string('verification_status', 16);
+            $table->timestamps();
+        });
+
+        $schema->create('yandex_specializations', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('occupation_id')->nullable();
+            $table->string('external_id_raw')->nullable();
+            $table->integer('external_number_id')->nullable()->unique();
+            $table->string('slug', 512)->nullable();
+            $table->string('name');
+            $table->string('source_url', 1024)->nullable();
+            $table->string('verification_status', 16);
+            $table->timestamps();
+            $table->foreign('occupation_id')
+                ->references('id')
+                ->on('yandex_occupations')
+                ->restrictOnDelete();
+        });
+
+        $schema->create('yandex_services', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('specialization_id')->nullable();
+            $table->string('external_id_raw')->nullable();
+            $table->integer('external_number_id')->nullable()->unique();
+            $table->string('slug', 512)->nullable();
+            $table->string('name');
+            $table->string('source_url', 1024)->nullable();
+            $table->string('verification_status', 16);
+            $table->timestamps();
+            $table->foreign('specialization_id')
+                ->references('id')
+                ->on('yandex_specializations')
+                ->restrictOnDelete();
+        });
+
+        $schema->create('category_yandex_occupations', function (Blueprint $table): void {
+            $table->unsignedBigInteger('category_id');
+            $table->unsignedBigInteger('occupation_id');
+            $table->integer('sort_order');
+            $table->primary(['category_id', 'occupation_id']);
+            $table->foreign('category_id')->references('id')->on('categories')->restrictOnDelete();
+            $table->foreign('occupation_id')->references('id')->on('yandex_occupations')->restrictOnDelete();
+        });
+
+        $schema->create('category_yandex_specializations', function (Blueprint $table): void {
+            $table->unsignedBigInteger('category_id');
+            $table->unsignedBigInteger('specialization_id');
+            $table->integer('sort_order');
+            $table->primary(['category_id', 'specialization_id']);
+            $table->foreign('category_id')->references('id')->on('categories')->restrictOnDelete();
+            $table->foreign('specialization_id')->references('id')->on('yandex_specializations')->restrictOnDelete();
+        });
+
+        $schema->create('category_yandex_services', function (Blueprint $table): void {
+            $table->unsignedBigInteger('category_id');
+            $table->unsignedBigInteger('service_id');
+            $table->integer('sort_order');
+            $table->primary(['category_id', 'service_id']);
+            $table->foreign('category_id')->references('id')->on('categories')->restrictOnDelete();
+            $table->foreign('service_id')->references('id')->on('yandex_services')->restrictOnDelete();
+        });
+
+        $schema->create('parser_category_targets', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('category_id');
+            $table->string('taxonomy_level', 16);
+            $table->integer('source_rubric_number_id');
+            $table->string('relative_path', 512);
+            $table->boolean('is_active')->default(true);
+            $table->integer('sort_order');
+            $table->timestamps();
+            $table->unique(['category_id', 'source_rubric_number_id']);
+            $table->foreign('category_id')
+                ->references('category_id')
+                ->on('parser_categories')
+                ->cascadeOnDelete();
+        });
+
         $schema->create('professionals', function (Blueprint $table): void {
             $table->id();
             $table->string('source');
@@ -100,6 +186,7 @@ trait CreatesParserSchema
             $table->string('source_rubric_id')->nullable();
             $table->string('source_rubric_seo_id')->nullable();
             $table->string('source_rubric_name')->nullable();
+            $table->string('source_rubric_level', 16)->nullable();
             $table->smallInteger('experience_code')->nullable();
             $table->string('experience_text', 64)->nullable();
             $table->dateTime('first_seen_at');

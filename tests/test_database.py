@@ -80,6 +80,9 @@ def test_repository_upsert_and_category_links() -> None:
         assert professional.phone_status == "revealed_ui"
         assert session.query(ProfessionalCategory).count() == 2
         assert session.query(ProfessionalCategoryRubric).count() == 1
+        rubric = session.scalar(select(ProfessionalCategoryRubric))
+        assert rubric is not None
+        assert rubric.source_rubric_level == "specialization"
 
     repository.upsert(
         make_profile(phone=None, phone_status="reveal_failed"),

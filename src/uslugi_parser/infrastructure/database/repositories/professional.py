@@ -255,6 +255,7 @@ class ProfessionalRepository:
                     session.add(rubric)
                 else:
                     rubric.last_seen_at = now
+                rubric.source_rubric_level = evidence.level
                 rubric.source_rubric_id = evidence.rubric_id
                 rubric.source_rubric_seo_id = evidence.seo_id
                 rubric.source_rubric_name = evidence.name

@@ -17,7 +17,7 @@ def test_all_requested_categories_have_unique_exact_seed_ids() -> None:
         assert category.seed_paths
         all_ids.extend(seed_number_id(path) for path in category.seed_paths)
     assert len(all_ids) == len(set(all_ids))
-    assert len(all_ids) == 64
+    assert len(all_ids) == 34
 
 
 def test_requested_category_names_match_database_seed_contract() -> None:
@@ -38,14 +38,16 @@ def test_requested_category_names_match_database_seed_contract() -> None:
     ]
 
 
-def test_broad_false_positive_seeds_are_not_used() -> None:
+def test_attachment_specialization_pages_are_used_without_broad_occupation() -> None:
+    """Обходить подтверждённые специализации, но не общий ремонт и строительство."""
+
     configured = {
         seed_number_id(path)
         for category in DEFAULT_CATEGORIES.values()
         for path in category.seed_paths
     }
-    assert {1800, 1816, 4647, 1708, 2178}.isdisjoint(configured)
-    assert {1809, 1725, 4638, 4023}.issubset(configured)
+    assert 1344 not in configured
+    assert {258, 1800, 1844, 1367, 1816, 4647, 1708, 2178, 5784}.issubset(configured)
 
 
 @pytest.mark.parametrize(

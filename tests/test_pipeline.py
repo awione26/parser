@@ -102,7 +102,7 @@ async def test_unknown_account_type_is_skipped() -> None:
     )
     stats = await crawl(
         settings=live_settings(),
-        categories=[DEFAULT_CATEGORIES["plumbers"]],
+        categories=[DEFAULT_CATEGORIES["electricians"]],
         max_pages=1,
         max_profiles=1,
         collect_phone=False,

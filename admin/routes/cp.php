@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\PhoneController;
 use App\Http\Controllers\Admin\ProfessionalController;
 use App\Http\Controllers\Admin\ProfessionalDeletionController;
 use App\Http\Controllers\Admin\ProfessionalExportController;
+use App\Http\Controllers\Admin\YandexCatalogController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -32,6 +33,8 @@ Route::middleware('auth')->group(function (): void {
             ->name('admin.settings.index');
         Route::put('settings', [ParserSettingController::class, 'update'])
             ->name('admin.settings.update');
+        Route::get('catalog', [YandexCatalogController::class, 'index'])
+            ->name('admin.catalog.index');
 
         Route::prefix('categories')->group(function (): void {
             Route::get('', [ParserCategoryController::class, 'index'])

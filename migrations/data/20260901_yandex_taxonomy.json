@@ -1,0 +1,2835 @@
+{
+  "schema_version": 1,
+  "yandex_occupations": [
+    {
+      "id": 1,
+      "external_id_raw": "/dizajnery",
+      "external_number_id": 217,
+      "slug": "/dizajneryi",
+      "name": "Дизайнеры",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/dizajneryi--217",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo",
+      "external_number_id": 1344,
+      "slug": "/remont-i-stroitelstvo",
+      "name": "Ремонт и строительство",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo--1344",
+      "verification_status": "confirmed"
+    },
+    {
+      "id": 3,
+      "external_id_raw": "/remont-i-ustanovka-tehniki",
+      "external_number_id": 2039,
+      "slug": "/remont-i-ustanovka-tehniki",
+      "name": "Ремонт и установка техники",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-ustanovka-tehniki--2039",
+      "verification_status": "discovered"
+    }
+  ],
+  "yandex_specializations": [
+    {
+      "id": 1,
+      "occupation_id": 1,
+      "external_id_raw": "/dizajnery/dizajner-inter_erov",
+      "external_number_id": 258,
+      "slug": "/dizajneryi/dizajner-intererov",
+      "name": "Дизайнеры интерьеров",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/dizajneryi/dizajner-intererov--258",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 2,
+      "occupation_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/proektirovanie-i-smety",
+      "external_number_id": 1800,
+      "slug": "/remont-i-stroitelstvo/proektirovanie-i-smetyi",
+      "name": "Проектирование строительных объектов и составление смет",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/proektirovanie-i-smetyi--1800",
+      "verification_status": "confirmed"
+    },
+    {
+      "id": 3,
+      "occupation_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/santehniceskie-raboty-i-otoplenie",
+      "external_number_id": 1844,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie",
+      "name": "Сантехнические работы и монтаж отопления",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie--1844",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 4,
+      "occupation_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/vodosnabjenie-i-kanalizazia",
+      "external_number_id": 1367,
+      "slug": "/remont-i-stroitelstvo/vodosnabzhenie-i-kanalizatsiya",
+      "name": "Водоснабжение и канализация",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/vodosnabzhenie-i-kanalizatsiya--1367",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 5,
+      "occupation_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/elektromontajnye-raboty",
+      "external_number_id": 2007,
+      "slug": "/remont-i-stroitelstvo/elektromontazhnyie-rabotyi",
+      "name": "Электромонтажные работы",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/elektromontazhnyie-rabotyi--2007",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 6,
+      "occupation_id": 2,
+      "external_id_raw": "5788",
+      "external_number_id": 5788,
+      "slug": "/remont-i-stroitelstvo/stoljarnye-i-plotnitskie-raboty",
+      "name": "Столярные и плотницкие работы",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/stoljarnye-i-plotnitskie-raboty--5788",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 7,
+      "occupation_id": 2,
+      "external_id_raw": "4647",
+      "external_number_id": 4647,
+      "slug": "/remont-i-stroitelstvo/sborka-i-remont-mebeli",
+      "name": "Сборка и ремонт мебели",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/sborka-i-remont-mebeli--4647",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 8,
+      "occupation_id": 2,
+      "external_id_raw": "4618",
+      "external_number_id": 4618,
+      "slug": "/remont-i-stroitelstvo/izgotovlenie-mebeli",
+      "name": "Изготовление мебели",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/izgotovlenie-mebeli--4618",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 9,
+      "occupation_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/remont-kvartir-i-domov",
+      "external_number_id": 1816,
+      "slug": "/remont-i-stroitelstvo/remont-kvartir-i-domov",
+      "name": "Ремонт квартир и домов",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/remont-kvartir-i-domov--1816",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 10,
+      "occupation_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/remont-ofisa",
+      "external_number_id": 1828,
+      "slug": "/remont-i-stroitelstvo/remont-ofisa",
+      "name": "Ремонт офиса",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/remont-ofisa--1828",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 11,
+      "occupation_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/oboi-i-malarnye-raboty",
+      "external_number_id": 1668,
+      "slug": "/remont-i-stroitelstvo/oboi-i-malyarnyie-rabotyi",
+      "name": "Поклейка обоев и малярные работы",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/oboi-i-malyarnyie-rabotyi--1668",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 12,
+      "occupation_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/plitocnye-raboty",
+      "external_number_id": 1749,
+      "slug": "/remont-i-stroitelstvo/plitochnyie-rabotyi",
+      "name": "Плиточные работы",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/plitochnyie-rabotyi--1749",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 13,
+      "occupation_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/poly-i-napol_nye-pokrytia",
+      "external_number_id": 1757,
+      "slug": "/remont-i-stroitelstvo/polyi-i-napolnyie-pokryitiya",
+      "name": "Укладка полов и напольных покрытий",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/polyi-i-napolnyie-pokryitiya--1757",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 14,
+      "occupation_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/potolki",
+      "external_number_id": 1792,
+      "slug": "/remont-i-stroitelstvo/potolki",
+      "name": "Монтаж потолков",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/potolki--1792",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 15,
+      "occupation_id": 2,
+      "external_id_raw": "5699",
+      "external_number_id": 5699,
+      "slug": "/remont-i-stroitelstvo/gipsokarton",
+      "name": "Монтаж из гипсокартона",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/gipsokarton--5699",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 16,
+      "occupation_id": 3,
+      "external_id_raw": "/remont-i-ustanovka-tehniki/stiral_nye-masiny",
+      "external_number_id": 2178,
+      "slug": "/remont-i-ustanovka-tehniki/stiralnyie-mashinyi",
+      "name": "Ремонт и установка стиральных машин",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-ustanovka-tehniki/stiralnyie-mashinyi--2178",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 17,
+      "occupation_id": 3,
+      "external_id_raw": "/remont-i-ustanovka-tehniki/posudomoecnye-masiny",
+      "external_number_id": 2140,
+      "slug": "/remont-i-ustanovka-tehniki/posudomoechnyie-mashinyi",
+      "name": "Ремонт и установка посудомоечных машин",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-ustanovka-tehniki/posudomoechnyie-mashinyi--2140",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 18,
+      "occupation_id": 3,
+      "external_id_raw": "/remont-i-ustanovka-tehniki/holodil_niki",
+      "external_number_id": 2227,
+      "slug": "/remont-i-ustanovka-tehniki/holodilniki",
+      "name": "Ремонт и установка холодильников",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-ustanovka-tehniki/holodilniki--2227",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 19,
+      "occupation_id": 3,
+      "external_id_raw": "6412",
+      "external_number_id": 6412,
+      "slug": "/remont-i-ustanovka-tehniki/morozilnie-kameri",
+      "name": "Ремонт и установка морозильных камер",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-ustanovka-tehniki/morozilnie-kameri--6412",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 20,
+      "occupation_id": 3,
+      "external_id_raw": "6221",
+      "external_number_id": 6221,
+      "slug": "/remont-i-ustanovka-tehniki/dukhovie-shkafi",
+      "name": "Ремонт и установка духовых шкафов",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-ustanovka-tehniki/dukhovie-shkafi--6221",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 21,
+      "occupation_id": 3,
+      "external_id_raw": "6220",
+      "external_number_id": 6220,
+      "slug": "/remont-i-ustanovka-tehniki/varochnie-paneli",
+      "name": "Ремонт и установка варочных панелей",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-ustanovka-tehniki/varochnie-paneli--6220",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 22,
+      "occupation_id": 3,
+      "external_id_raw": "/remont-i-ustanovka-tehniki/kuhonnye-plity",
+      "external_number_id": 2077,
+      "slug": "/remont-i-ustanovka-tehniki/kuhonnyie-plityi",
+      "name": "Ремонт и установка кухонных плит",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-ustanovka-tehniki/kuhonnyie-plityi--2077",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 23,
+      "occupation_id": 3,
+      "external_id_raw": "5364",
+      "external_number_id": 5364,
+      "slug": "/remont-i-ustanovka-tehniki/vytjazhki",
+      "name": "Ремонт и установка вытяжек",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-ustanovka-tehniki/vytjazhki--5364",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 24,
+      "occupation_id": 3,
+      "external_id_raw": "/remont-i-ustanovka-tehniki/kondizionery",
+      "external_number_id": 2063,
+      "slug": "/remont-i-ustanovka-tehniki/konditsioneryi",
+      "name": "Ремонт и установка кондиционеров",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-ustanovka-tehniki/konditsioneryi--2063",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 25,
+      "occupation_id": 3,
+      "external_id_raw": "/remont-i-ustanovka-tehniki/melkaa-bytovaa-tehnika",
+      "external_number_id": 2094,
+      "slug": "/remont-i-ustanovka-tehniki/remont-melkoj-byitovoj-tehniki",
+      "name": "Ремонт и установка мелкой бытовой техники",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-ustanovka-tehniki/remont-melkoj-byitovoj-tehniki--2094",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 26,
+      "occupation_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/okna-i-balkony",
+      "external_number_id": 1708,
+      "slug": "/remont-i-stroitelstvo/okna-i-balkonyi",
+      "name": "Ремонт и установка окон и балконов",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/okna-i-balkonyi--1708",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 27,
+      "occupation_id": 2,
+      "external_id_raw": "5324",
+      "external_number_id": 5324,
+      "slug": "/remont-i-stroitelstvo/remont-i-ustanovka-zamkov",
+      "name": "Ремонт и установка замков",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/remont-i-ustanovka-zamkov--5324",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 28,
+      "occupation_id": 2,
+      "external_id_raw": "5274",
+      "external_number_id": 5274,
+      "slug": "/remont-i-stroitelstvo/vskrytie-zamkov",
+      "name": "Вскрытие замков",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/vskrytie-zamkov--5274",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 29,
+      "occupation_id": 2,
+      "external_id_raw": "5311",
+      "external_number_id": 5311,
+      "slug": "/remont-i-stroitelstvo/ustanovka-dverej",
+      "name": "Установка дверей",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/ustanovka-dverej--5311",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 30,
+      "occupation_id": 2,
+      "external_id_raw": "5319",
+      "external_number_id": 5319,
+      "slug": "/remont-i-stroitelstvo/remont-dverej",
+      "name": "Ремонт дверей",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/remont-dverej--5319",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 31,
+      "occupation_id": 2,
+      "external_id_raw": "5784",
+      "external_number_id": 5784,
+      "slug": "/remont-i-stroitelstvo/slabotochnye-sistemy",
+      "name": "Слаботочные системы",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/slabotochnye-sistemy--5784",
+      "verification_status": "confirmed"
+    },
+    {
+      "id": 32,
+      "occupation_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/ohrannye-sistemy-i-kontrol_-dostupa",
+      "external_number_id": 1729,
+      "slug": "/remont-i-stroitelstvo/ohrannyie-sistemyi-i-kontrol-dostupa",
+      "name": "Установка охранных систем и контроля доступа",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/ohrannyie-sistemyi-i-kontrol-dostupa--1729",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 33,
+      "occupation_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/umnyj-dom",
+      "external_number_id": 1967,
+      "slug": "/remont-i-stroitelstvo/umnyij-dom",
+      "name": "Установка «умного дома»",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/umnyij-dom--1967",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 34,
+      "occupation_id": 2,
+      "external_id_raw": "5798",
+      "external_number_id": 5798,
+      "slug": "/remont-i-stroitelstvo/antenny",
+      "name": "Ремонт антенн",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/antenny--5798",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 35,
+      "occupation_id": 2,
+      "external_id_raw": "5689",
+      "external_number_id": 5689,
+      "slug": "/remont-i-stroitelstvo/ustanovka-generatorov",
+      "name": "Установка генераторов",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/ustanovka-generatorov--5689",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 36,
+      "occupation_id": 2,
+      "external_id_raw": "5290",
+      "external_number_id": 5290,
+      "slug": "/remont-i-stroitelstvo/izgotovlenie-dverej-iz-dereva",
+      "name": "Изготовление дверей из дерева",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/izgotovlenie-dverej-iz-dereva--5290",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 37,
+      "occupation_id": 2,
+      "external_id_raw": "4623",
+      "external_number_id": 4623,
+      "slug": "/remont-i-stroitelstvo/izgotovlenie-kuhni",
+      "name": "Изготовление кухни",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/izgotovlenie-kuhni--4623",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 38,
+      "occupation_id": 2,
+      "external_id_raw": "4621",
+      "external_number_id": 4621,
+      "slug": "/remont-i-stroitelstvo/izgotovlenie-shkafov-kupe",
+      "name": "Изготовление шкафов-купе",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/izgotovlenie-shkafov-kupe--4621",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 39,
+      "occupation_id": 2,
+      "external_id_raw": "5437",
+      "external_number_id": 5437,
+      "slug": "/remont-i-stroitelstvo/izgotovlenie-okon",
+      "name": "Изготовление окон",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/izgotovlenie-okon--5437",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 40,
+      "occupation_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/stekol_nye-uslugi",
+      "external_number_id": 1928,
+      "slug": "/remont-i-stroitelstvo/stekolnyie-uslugi",
+      "name": "Стекольные услуги",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/stekolnyie-uslugi--1928",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 41,
+      "occupation_id": 2,
+      "external_id_raw": "5287",
+      "external_number_id": 5287,
+      "slug": "/remont-i-stroitelstvo/izgotovlenie-kljuchej",
+      "name": "Изготовление ключей",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/izgotovlenie-kljuchej--5287",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 42,
+      "occupation_id": 2,
+      "external_id_raw": "5282",
+      "external_number_id": 5282,
+      "slug": "/remont-i-stroitelstvo/izgotovlenie-metallicheskih-dverej",
+      "name": "Изготовление металлических дверей",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/izgotovlenie-metallicheskih-dverej--5282",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 43,
+      "occupation_id": 2,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Штукатурные работы",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 44,
+      "occupation_id": 2,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Малярные работы",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 45,
+      "occupation_id": 2,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Поклейка обоев",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 46,
+      "occupation_id": 2,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Работы с гипсокартоном",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 47,
+      "occupation_id": 2,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Проектирование систем безопасности",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 48,
+      "occupation_id": 2,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Проектирование телекоммуникаций",
+      "source_url": null,
+      "verification_status": "unverified"
+    }
+  ],
+  "yandex_services": [
+    {
+      "id": 1,
+      "specialization_id": 1,
+      "external_id_raw": "/dizajnery/dizajner-inter_erov/dizajn-proekt-inter_era-kvartiry",
+      "external_number_id": 261,
+      "slug": "/dizajneryi/dizajner-intererov/dizajn-proekt-interera-kvartiryi",
+      "name": "Дизайн-проект интерьера квартиры",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/dizajneryi/dizajner-intererov/dizajn-proekt-interera-kvartiryi--261",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 2,
+      "specialization_id": 1,
+      "external_id_raw": "/dizajnery/dizajner-inter_erov/trehmernaa-vizualizazia",
+      "external_number_id": 266,
+      "slug": "/dizajneryi/dizajner-intererov/trehmernaya-vizualizatsiya",
+      "name": "Трехмерная визуализация дизайна интерьеров",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/dizajneryi/dizajner-intererov/trehmernaya-vizualizatsiya--266",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 3,
+      "specialization_id": 1,
+      "external_id_raw": "/dizajnery/dizajner-inter_erov/dizajn-proekt-inter_era-doma",
+      "external_number_id": 260,
+      "slug": "/dizajneryi/dizajner-intererov/dizajn-proekt-interera-doma",
+      "name": "Дизайн-проект интерьера дома",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/dizajneryi/dizajner-intererov/dizajn-proekt-interera-doma--260",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 4,
+      "specialization_id": 1,
+      "external_id_raw": "/dizajnery/dizajner-inter_erov/podbor-materialov-i-mebeli",
+      "external_number_id": 265,
+      "slug": "/dizajneryi/dizajner-intererov/podbor-materialov-i-mebeli",
+      "name": "Дизайнерский подбор материалов и мебели",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/dizajneryi/dizajner-intererov/podbor-materialov-i-mebeli--265",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 5,
+      "specialization_id": 1,
+      "external_id_raw": "/dizajneryi/dizajner-intererov/dizajn-proekt-interera-kuhni",
+      "external_number_id": 4336,
+      "slug": "/dizajneryi/dizajner-intererov/dizajn-proekt-interera-kuhni",
+      "name": "Дизайн-проект интерьера кухни",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/dizajneryi/dizajner-intererov/dizajn-proekt-interera-kuhni--4336",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 6,
+      "specialization_id": 1,
+      "external_id_raw": "/dizajnery/dizajner-inter_erov/avtorskij-nadzor",
+      "external_number_id": 259,
+      "slug": "/dizajneryi/dizajner-intererov/avtorskij-nadzor",
+      "name": "Авторский надзор в дизайне интерьеров",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/dizajneryi/dizajner-intererov/avtorskij-nadzor--259",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 7,
+      "specialization_id": 1,
+      "external_id_raw": "/dizajneryi/dizajner-intererov/dizajn-proekt-interera-detskoj-komnatyi",
+      "external_number_id": 4337,
+      "slug": "/dizajneryi/dizajner-intererov/dizajn-proekt-interera-detskoj-komnatyi",
+      "name": "Дизайн-проект интерьера детской комнаты",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/dizajneryi/dizajner-intererov/dizajn-proekt-interera-detskoj-komnatyi--4337",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 8,
+      "specialization_id": 1,
+      "external_id_raw": "/dizajnery/dizajner-inter_erov/dizajn-proekt-inter_era-magazina",
+      "external_number_id": 262,
+      "slug": "/dizajneryi/dizajner-intererov/dizajn-proekt-interera-magazina",
+      "name": "Дизайн-проект интерьера магазина",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/dizajneryi/dizajner-intererov/dizajn-proekt-interera-magazina--262",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 9,
+      "specialization_id": 1,
+      "external_id_raw": "/dizajneryi/dizajner-intererov/dizajn-proekt-interera-prihozhej",
+      "external_number_id": 4339,
+      "slug": "/dizajneryi/dizajner-intererov/dizajn-proekt-interera-prihozhej",
+      "name": "Дизайн-проект интерьера прихожей",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/dizajneryi/dizajner-intererov/dizajn-proekt-interera-prihozhej--4339",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 10,
+      "specialization_id": 1,
+      "external_id_raw": "/dizajneryi/dizajner-intererov/dizajn-proekt-interera-sanuzla",
+      "external_number_id": 4341,
+      "slug": "/dizajneryi/dizajner-intererov/dizajn-proekt-interera-sanuzla",
+      "name": "Дизайн-проект интерьера санузла",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/dizajneryi/dizajner-intererov/dizajn-proekt-interera-sanuzla--4341",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 11,
+      "specialization_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/proektirovanie-i-smety/sostavlenie-smety-na-stroitel_nye-raboty",
+      "external_number_id": 1815,
+      "slug": "/remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-stroitelnyie-rabotyi",
+      "name": "Составление сметы на строительные работы",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-stroitelnyie-rabotyi--1815",
+      "verification_status": "confirmed"
+    },
+    {
+      "id": 12,
+      "specialization_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/proektirovanie-i-smety/proektirovanie-otoplenia-i-vodosnabjenia",
+      "external_number_id": 1805,
+      "slug": "/remont-i-stroitelstvo/proektirovanie-i-smetyi/proektirovanie-otopleniya-i-vodosnabzheniya",
+      "name": "Проектирование отопления и водоснабжения",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/proektirovanie-i-smetyi/proektirovanie-otopleniya-i-vodosnabzheniya--1805",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 13,
+      "specialization_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/proektirovanie-i-smety/proektirovanie-elektrosetej",
+      "external_number_id": 1808,
+      "slug": "/remont-i-stroitelstvo/proektirovanie-i-smetyi/proektirovanie-elektrosetej",
+      "name": "Проектирование электросетей",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/proektirovanie-i-smetyi/proektirovanie-elektrosetej--1808",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 14,
+      "specialization_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/proektirovanie-i-smety/proektirovanie-ventilazii-i-kondizionirovania",
+      "external_number_id": 1801,
+      "slug": "/remont-i-stroitelstvo/proektirovanie-i-smetyi/proektirovanie-ventilyatsii-i-konditsionirovaniya",
+      "name": "Проектирование вентиляции и кондиционирования",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/proektirovanie-i-smetyi/proektirovanie-ventilyatsii-i-konditsionirovaniya--1801",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 15,
+      "specialization_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/proektirovanie-i-smety/sostavlenie-smety-na-remontnye-raboty",
+      "external_number_id": 1814,
+      "slug": "/remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-remontnyie-rabotyi",
+      "name": "Составление сметы на ремонтные работы",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-remontnyie-rabotyi--1814",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 16,
+      "specialization_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/proektirovanie-i-smety/proektirovanie-sistem-bezopasnosti",
+      "external_number_id": 1806,
+      "slug": "/remont-i-stroitelstvo/proektirovanie-i-smetyi/proektirovanie-sistem-bezopasnosti",
+      "name": "Проектирование систем безопасности",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/proektirovanie-i-smetyi/proektirovanie-sistem-bezopasnosti--1806",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 17,
+      "specialization_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/proektirovanie-i-smety/sostavlenie-smety-na-proektnye-raboty",
+      "external_number_id": 1812,
+      "slug": "/remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-proektnyie-rabotyi",
+      "name": "Составление сметы на проектные работы",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-proektnyie-rabotyi--1812",
+      "verification_status": "confirmed"
+    },
+    {
+      "id": 18,
+      "specialization_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/proektirovanie-i-smety/proektirovanie-kanalizazii",
+      "external_number_id": 1804,
+      "slug": "/remont-i-stroitelstvo/proektirovanie-i-smetyi/proektirovanie-kanalizatsii",
+      "name": "Проектирование канализации",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/proektirovanie-i-smetyi/proektirovanie-kanalizatsii--1804",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 19,
+      "specialization_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/proektirovanie-i-smety/sostavlenie-smety-na-montaj-oborudovania",
+      "external_number_id": 1811,
+      "slug": "/remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-montazh-oborudovaniya",
+      "name": "Составление сметы на монтаж оборудования",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-montazh-oborudovaniya--1811",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 20,
+      "specialization_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/proektirovanie-i-smety/sostavlenie-smety-na-izyskatel_skie-raboty",
+      "external_number_id": 1810,
+      "slug": "/remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-izyiskatelskie-rabotyi",
+      "name": "Составление сметы на изыскательские работы",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-izyiskatelskie-rabotyi--1810",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 21,
+      "specialization_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/proektirovanie-i-smety/sostavlenie-smety-na-puskonaladocnye-raboty",
+      "external_number_id": 1813,
+      "slug": "/remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-puskonaladochnyie-rabotyi",
+      "name": "Составление сметы на пусконаладочные работы",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-puskonaladochnyie-rabotyi--1813",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 22,
+      "specialization_id": 2,
+      "external_id_raw": "/remont-i-stroitel_stvo/proektirovanie-i-smety/proektirovanie-telekommunikazij",
+      "external_number_id": 1807,
+      "slug": "/remont-i-stroitelstvo/proektirovanie-i-smetyi/proektirovanie-telekommunikatsij",
+      "name": "Проектирование телекоммуникаций",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/proektirovanie-i-smetyi/proektirovanie-telekommunikatsij--1807",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 23,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitel_stvo/santehniceskie-raboty-i-otoplenie/montaj-santehniceskogo-oborudovania",
+      "external_number_id": 1871,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/montazh-santehnicheskogo-oborudovaniya",
+      "name": "Монтаж сантехнического оборудования",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/montazh-santehnicheskogo-oborudovaniya--1871",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 24,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitel_stvo/santehniceskie-raboty-i-otoplenie/zamena-vodoscetcika",
+      "external_number_id": 1852,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/zamena-vodoschetchika",
+      "name": "Замена водосчетчика",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/zamena-vodoschetchika--1852",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 25,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitel_stvo/santehniceskie-raboty-i-otoplenie/montaj-trub",
+      "external_number_id": 1876,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/montazh-trub",
+      "name": "Монтаж сантехнических и отопительных труб",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/montazh-trub--1876",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 26,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitel_stvo/santehniceskie-raboty-i-otoplenie/montaj-radiatorov-otoplenia",
+      "external_number_id": 1869,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/montazh-radiatorov-otopleniya",
+      "name": "Монтаж радиатора отопления",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/montazh-radiatorov-otopleniya--1869",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 27,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitel_stvo/santehniceskie-raboty-i-otoplenie/ustanovka-radiatora-otoplenia",
+      "external_number_id": 1898,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/ustanovka-radiatora-otopleniya",
+      "name": "Установка радиатора отопления",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/ustanovka-radiatora-otopleniya--1898",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 28,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitel_stvo/santehniceskie-raboty-i-otoplenie/montaj-dusevoj-kabinki",
+      "external_number_id": 1862,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/montazh-dushevoj-kabinki",
+      "name": "Монтаж душевой кабины",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/montazh-dushevoj-kabinki--1862",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 29,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitel_stvo/santehniceskie-raboty-i-otoplenie/ustanovka-i-podklucenie-stiral_noj-masiny",
+      "external_number_id": 1897,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/ustanovka-i-podklyuchenie-stiralnoj-mashinyi",
+      "name": "Установка и подключение стиральной машины",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/ustanovka-i-podklyuchenie-stiralnoj-mashinyi--1897",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 30,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitel_stvo/santehniceskie-raboty-i-otoplenie/montaj-unitaza",
+      "external_number_id": 1878,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/montazh-unitaza",
+      "name": "Монтаж унитаза",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/montazh-unitaza--1878",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 31,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitel_stvo/santehniceskie-raboty-i-otoplenie/montaj-unitaza-s-installaziej",
+      "external_number_id": 1879,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/montazh-unitaza-s-installyatsiej",
+      "name": "Монтаж унитаза с инсталляцией",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/montazh-unitaza-s-installyatsiej--1879",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 32,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка водосчетчика",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 33,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitel_stvo/santehniceskie-raboty-i-otoplenie/ustanovka-i-podklucenie-posudomoecnoj-masiny",
+      "external_number_id": 1896,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/ustanovka-i-podklyuchenie-posudomoechnoj-mashinyi",
+      "name": "Установка и подключение посудомоечной машины",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/ustanovka-i-podklyuchenie-posudomoechnoj-mashinyi--1896",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 34,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/ustanovka-vannyi",
+      "external_number_id": 4252,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/ustanovka-vannyi",
+      "name": "Монтаж ванны",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/ustanovka-vannyi--4252",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 35,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitel_stvo/santehniceskie-raboty-i-otoplenie/demontaj-santehniki",
+      "external_number_id": 1850,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/demontazh-santehniki",
+      "name": "Демонтаж сантехники",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/demontazh-santehniki--1850",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 36,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/zamena-smesitelya",
+      "external_number_id": 4246,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/zamena-smesitelya",
+      "name": "Замена смесителя",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/zamena-smesitelya--4246",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 37,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/ustranenie-zasora",
+      "external_number_id": 4259,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/ustranenie-zasora",
+      "name": "Устранение засора",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/ustranenie-zasora--4259",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 38,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/zamena-unitaza",
+      "external_number_id": 4257,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/zamena-unitaza",
+      "name": "Замена унитаза",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/zamena-unitaza--4257",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 39,
+      "specialization_id": 3,
+      "external_id_raw": "/remont-i-stroitel_stvo/santehniceskie-raboty-i-otoplenie/ustanovka-smesitela",
+      "external_number_id": 1899,
+      "slug": "/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/ustanovka-smesitelya",
+      "name": "Монтаж смесителя",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie/ustanovka-smesitelya--1899",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 40,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Устранение протечек",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 41,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Монтаж труб",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 42,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт сантехники",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 43,
+      "specialization_id": 5,
+      "external_id_raw": "6404",
+      "external_number_id": 6404,
+      "slug": "/remont-i-stroitelstvo/elektromontazhnyie-rabotyi/diagnostika",
+      "name": "Диагностика электрики",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/elektromontazhnyie-rabotyi/diagnostika--6404",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 44,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Монтаж электропроводки",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 45,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт электропроводки",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 46,
+      "specialization_id": 5,
+      "external_id_raw": "/remont-i-stroitel_stvo/elektromontajnye-raboty/prokladka-kabela",
+      "external_number_id": 2024,
+      "slug": "/remont-i-stroitelstvo/elektromontazhnyie-rabotyi/prokladka-kabelya",
+      "name": "Прокладка кабеля",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/elektromontazhnyie-rabotyi/prokladka-kabelya--2024",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 47,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка розеток",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 48,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка выключателей",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 49,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка светильников",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 50,
+      "specialization_id": 5,
+      "external_id_raw": "6832",
+      "external_number_id": 6832,
+      "slug": "/remont-i-stroitelstvo/elektromontazhnyie-rabotyi/montazh-elektroshchita",
+      "name": "Монтаж электрощита",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/elektromontazhnyie-rabotyi/montazh-elektroshchita--6832",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 51,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка автоматов",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 52,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Поиск неисправности электропроводки",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 53,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Поиск обрыва электрической цепи",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 54,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Устранение короткого замыкания",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 55,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Подключение электрооборудования",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 56,
+      "specialization_id": 35,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка генераторов",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 57,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Плотницкие работы",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 58,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Столярные работы",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 59,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Изготовление деревянных конструкций",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 60,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт деревянных конструкций",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 61,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Монтаж деревянных конструкций",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 62,
+      "specialization_id": 36,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Изготовление дверей из дерева",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 63,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Изготовление лестниц",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 64,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт деревянных лестниц",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 65,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Отделка деревянных домов",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 66,
+      "specialization_id": 7,
+      "external_id_raw": "4638",
+      "external_number_id": 4638,
+      "slug": "/remont-i-stroitelstvo/mebel/sborka-mebeli",
+      "name": "Сборка мебели",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/mebel/sborka-mebeli--4638",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 67,
+      "specialization_id": 7,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Сборка шкафа",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 68,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Сборка шкафа-купе",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 69,
+      "specialization_id": 7,
+      "external_id_raw": "6853",
+      "external_number_id": 6853,
+      "slug": "/remont-i-stroitelstvo/sborka-i-remont-mebeli/sborka-krovati-mrkt",
+      "name": "Сборка кровати",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/sborka-i-remont-mebeli/sborka-krovati-mrkt--6853",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 70,
+      "specialization_id": 7,
+      "external_id_raw": "6846",
+      "external_number_id": 6846,
+      "slug": "/remont-i-stroitelstvo/sborka-i-remont-mebeli/sborka-stola-mrkt",
+      "name": "Сборка стола",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/sborka-i-remont-mebeli/sborka-stola-mrkt--6846",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 71,
+      "specialization_id": 7,
+      "external_id_raw": "4641",
+      "external_number_id": 4641,
+      "slug": "/remont-i-stroitelstvo/mebel/sborka-kuhni",
+      "name": "Сборка кухни",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/mebel/sborka-kuhni--4641",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 72,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка кухни",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 73,
+      "specialization_id": 7,
+      "external_id_raw": "4631",
+      "external_number_id": 4631,
+      "slug": "/remont-i-stroitelstvo/mebel/remont-mebeli",
+      "name": "Ремонт мебели",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/mebel/remont-mebeli--4631",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 74,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт корпусной мебели",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 75,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт мягкой мебели",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 76,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Перетяжка мебели",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 77,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Изготовление мебели на заказ",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 78,
+      "specialization_id": 37,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Изготовление кухни",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 79,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Изготовление кухонной мебели",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 80,
+      "specialization_id": 38,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Изготовление шкафов-купе",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 81,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Изготовление шкафа-купе",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 82,
+      "specialization_id": 11,
+      "external_id_raw": "/remont-i-stroitel_stvo/oboi-i-malarnye-raboty/stukaturka-sten",
+      "external_number_id": 1692,
+      "slug": "/remont-i-stroitelstvo/oboi-i-malyarnyie-rabotyi/shtukaturka-sten",
+      "name": "Штукатурка стен",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/oboi-i-malyarnyie-rabotyi/shtukaturka-sten--1692",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 83,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Штукатурка потолка",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 84,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Шпатлевание стен",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 85,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Шпатлевание потолка",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 86,
+      "specialization_id": 11,
+      "external_id_raw": "/remont-i-stroitel_stvo/oboi-i-malarnye-raboty/pokraska-sten",
+      "external_number_id": 1686,
+      "slug": "/remont-i-stroitelstvo/oboi-i-malyarnyie-rabotyi/pokraska-sten",
+      "name": "Покраска стен",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/oboi-i-malyarnyie-rabotyi/pokraska-sten--1686",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 87,
+      "specialization_id": 11,
+      "external_id_raw": "/remont-i-stroitel_stvo/oboi-i-malarnye-raboty/pokraska-potolka",
+      "external_number_id": 1684,
+      "slug": "/remont-i-stroitelstvo/oboi-i-malyarnyie-rabotyi/pokraska-potolka",
+      "name": "Покраска потолка",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/oboi-i-malyarnyie-rabotyi/pokraska-potolka--1684",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 88,
+      "specialization_id": 11,
+      "external_id_raw": "/remont-i-stroitel_stvo/oboi-i-malarnye-raboty/poklejka-oboev",
+      "external_number_id": 1679,
+      "slug": "/remont-i-stroitelstvo/oboi-i-malyarnyie-rabotyi/poklejka-oboev",
+      "name": "Поклейка обоев",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/oboi-i-malyarnyie-rabotyi/poklejka-oboev--1679",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 89,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Укладка плитки",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 90,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Укладка плитки в ванной",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 91,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Укладка плитки в туалете",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 92,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Укладка ламината",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 93,
+      "specialization_id": 13,
+      "external_id_raw": "/remont-i-stroitel_stvo/poly-i-napol_nye-pokrytia/ukladka-linoleuma",
+      "external_number_id": 1778,
+      "slug": "/remont-i-stroitelstvo/polyi-i-napolnyie-pokryitiya/ukladka-linoleuma",
+      "name": "Укладка линолеума",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/polyi-i-napolnyie-pokryitiya/ukladka-linoleuma--1778",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 94,
+      "specialization_id": 13,
+      "external_id_raw": "/remont-i-stroitel_stvo/poly-i-napol_nye-pokrytia/ukladka-parketa",
+      "external_number_id": 1779,
+      "slug": "/remont-i-stroitelstvo/polyi-i-napolnyie-pokryitiya/ukladka-parketa",
+      "name": "Укладка паркета",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/polyi-i-napolnyie-pokryitiya/ukladka-parketa--1779",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 95,
+      "specialization_id": 13,
+      "external_id_raw": "/remont-i-stroitel_stvo/poly-i-napol_nye-pokrytia/ustanovka-plintusa",
+      "external_number_id": 1781,
+      "slug": "/remont-i-stroitelstvo/polyi-i-napolnyie-pokryitiya/ustanovka-plintusa",
+      "name": "Установка плинтуса",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/polyi-i-napolnyie-pokryitiya/ustanovka-plintusa--1781",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 96,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Монтаж гипсокартона",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 97,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Монтаж перегородок",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 98,
+      "specialization_id": 14,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Монтаж потолков",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 99,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт квартиры",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 100,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Косметический ремонт",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 101,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Капитальный ремонт",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 102,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Отделочные работы",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 103,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт стиральных машин",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 104,
+      "specialization_id": 17,
+      "external_id_raw": "4064",
+      "external_number_id": 4064,
+      "slug": "/remont-i-ustanovka-tehniki/posudomoechnyie-mashinyi/remont-posudomoechnyih-mashin",
+      "name": "Ремонт посудомоечных машин",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-ustanovka-tehniki/posudomoechnyie-mashinyi/remont-posudomoechnyih-mashin--4064",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 105,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт холодильников",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 106,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт морозильных камер",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 107,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт духовых шкафов",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 108,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт варочных панелей",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 109,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт электроплит",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 110,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт газовых плит",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 111,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт вытяжек",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 112,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт кондиционеров",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 113,
+      "specialization_id": 25,
+      "external_id_raw": "/remont-i-ustanovka-tehniki/melkaa-bytovaa-tehnika/remont-melkoj-bytovoj-tehniki",
+      "external_number_id": 2101,
+      "slug": "/remont-i-ustanovka-tehniki/remont-melkoj-byitovoj-tehniki/remont-melkoj-byitovoj-tehniki",
+      "name": "Ремонт мелкой бытовой техники",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-ustanovka-tehniki/remont-melkoj-byitovoj-tehniki/remont-melkoj-byitovoj-tehniki--2101",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 114,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка стиральной машины",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 115,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка посудомоечной машины",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 116,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Подключение бытовой техники",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 117,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка бытовой техники",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 118,
+      "specialization_id": 39,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Изготовление окон",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 119,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка окон",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 120,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт пластиковых окон",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 121,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Регулировка пластиковых окон",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 122,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Замена стекла",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 123,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Замена стеклопакета",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 124,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт оконной фурнитуры",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 125,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Замена оконной фурнитуры",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 126,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка москитной сетки",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 127,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт москитной сетки",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 128,
+      "specialization_id": 26,
+      "external_id_raw": "/remont-i-stroitelstvo/okna-i-balkonyi/uteplenie-okon",
+      "external_number_id": 4299,
+      "slug": "/remont-i-stroitelstvo/okna-i-balkonyi/uteplenie-okon",
+      "name": "Утепление окон",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/okna-i-balkonyi/uteplenie-okon--4299",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 129,
+      "specialization_id": 26,
+      "external_id_raw": "/remont-i-stroitel_stvo/okna-i-balkony/germetizazia-okon",
+      "external_number_id": 1713,
+      "slug": "/remont-i-stroitelstvo/okna-i-balkonyi/germetizatsiya-okon",
+      "name": "Герметизация окон",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/okna-i-balkonyi/germetizatsiya-okon--1713",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 130,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт балконных дверей",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 131,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Остекление балконов",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 132,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт балконов",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 133,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт лоджий",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 134,
+      "specialization_id": 40,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Стекольные услуги",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 135,
+      "specialization_id": 28,
+      "external_id_raw": "5273",
+      "external_number_id": 5273,
+      "slug": "/remont-i-stroitelstvo/dveri-i-zamki/vskryitie-zamka",
+      "name": "Вскрытие дверного замка",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/dveri-i-zamki/vskryitie-zamka--5273",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 136,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Замена дверного замка",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 137,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка дверного замка",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 138,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт дверного замка",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 139,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка кодового замка",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 140,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт кодового замка",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 141,
+      "specialization_id": 41,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Изготовление ключей",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 142,
+      "specialization_id": 29,
+      "external_id_raw": "5295",
+      "external_number_id": 5295,
+      "slug": "/remont-i-stroitelstvo/dveri-i-zamki/ustanovka-vhodnoj-dveri",
+      "name": "Установка входной двери",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/dveri-i-zamki/ustanovka-vhodnoj-dveri--5295",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 143,
+      "specialization_id": 29,
+      "external_id_raw": "5291",
+      "external_number_id": 5291,
+      "slug": "/remont-i-stroitelstvo/dveri-i-zamki/ustanovka-mezhkomnatnoj-dveri",
+      "name": "Установка межкомнатной двери",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/dveri-i-zamki/ustanovka-mezhkomnatnoj-dveri--5291",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 144,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт входной двери",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 145,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт межкомнатной двери",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 146,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Регулировка двери",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 147,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Замена дверной фурнитуры",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 148,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Изготовление деревянных дверей",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 149,
+      "specialization_id": 42,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Изготовление металлических дверей",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 150,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Монтаж слаботочных систем",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 151,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Прокладка слаботочного кабеля",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 152,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка видеонаблюдения",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 153,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Монтаж видеонаблюдения",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 154,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка IP-камер",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 155,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Настройка видеонаблюдения",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 156,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Монтаж СКУД",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 157,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка системы контроля доступа",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 158,
+      "specialization_id": 32,
+      "external_id_raw": "/remont-i-stroitel_stvo/ohrannye-sistemy-i-kontrol_-dostupa/montaj-domofona",
+      "external_number_id": 1735,
+      "slug": "/remont-i-stroitelstvo/ohrannyie-sistemyi-i-kontrol-dostupa/montazh-domofona",
+      "name": "Монтаж домофона",
+      "source_url": "https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/ohrannyie-sistemyi-i-kontrol-dostupa/montazh-domofona--1735",
+      "verification_status": "discovered"
+    },
+    {
+      "id": 159,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка домофона",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 160,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Монтаж охранной сигнализации",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 161,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка охранной сигнализации",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 162,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Монтаж пожарной сигнализации",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 163,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка пожарной сигнализации",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 164,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Монтаж локальной сети",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 165,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Прокладка сетевого кабеля",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 166,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Настройка локальной сети",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 167,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Монтаж телекоммуникационного оборудования",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 168,
+      "specialization_id": 33,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Установка умного дома",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 169,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Настройка умного дома",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 170,
+      "specialization_id": null,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Монтаж антенн",
+      "source_url": null,
+      "verification_status": "unverified"
+    },
+    {
+      "id": 171,
+      "specialization_id": 34,
+      "external_id_raw": null,
+      "external_number_id": null,
+      "slug": null,
+      "name": "Ремонт антенн",
+      "source_url": null,
+      "verification_status": "unverified"
+    }
+  ],
+  "groups": [
+    {
+      "category_key": "designers",
+      "occupation_ids": [
+        1
+      ],
+      "specialization_ids": [
+        1
+      ],
+      "service_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "crawl_targets": [
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 258,
+          "relative_path": "dizajneryi/dizajner-intererov--258"
+        }
+      ],
+      "legacy_seed_paths": [
+        "dizajneryi--217"
+      ]
+    },
+    {
+      "category_key": "estimators",
+      "occupation_ids": [
+        2
+      ],
+      "specialization_ids": [
+        2
+      ],
+      "service_ids": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "crawl_targets": [
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 1800,
+          "relative_path": "remont-i-stroitelstvo/proektirovanie-i-smetyi--1800"
+        }
+      ],
+      "legacy_seed_paths": [
+        "remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi--1809",
+        "remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-stroitelnyie-rabotyi--1815",
+        "remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-remontnyie-rabotyi--1814",
+        "remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-proektnyie-rabotyi--1812",
+        "remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-montazh-oborudovaniya--1811",
+        "remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-izyiskatelskie-rabotyi--1810",
+        "remont-i-stroitelstvo/proektirovanie-i-smetyi/sostavlenie-smetyi-na-puskonaladochnyie-rabotyi--1813"
+      ]
+    },
+    {
+      "category_key": "plumbers",
+      "occupation_ids": [
+        2
+      ],
+      "specialization_ids": [
+        3,
+        4
+      ],
+      "service_ids": [
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42
+      ],
+      "crawl_targets": [
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 1844,
+          "relative_path": "remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie--1844"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 1367,
+          "relative_path": "remont-i-stroitelstvo/vodosnabzhenie-i-kanalizatsiya--1367"
+        }
+      ],
+      "legacy_seed_paths": [
+        "remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie--1844"
+      ]
+    },
+    {
+      "category_key": "electricians",
+      "occupation_ids": [
+        2
+      ],
+      "specialization_ids": [
+        5,
+        35
+      ],
+      "service_ids": [
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56
+      ],
+      "crawl_targets": [
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 2007,
+          "relative_path": "remont-i-stroitelstvo/elektromontazhnyie-rabotyi--2007"
+        }
+      ],
+      "legacy_seed_paths": [
+        "remont-i-stroitelstvo/elektromontazhnyie-rabotyi--2007"
+      ]
+    },
+    {
+      "category_key": "carpenters",
+      "occupation_ids": [
+        2
+      ],
+      "specialization_ids": [
+        6,
+        36
+      ],
+      "service_ids": [
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65
+      ],
+      "crawl_targets": [
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 5788,
+          "relative_path": "remont-i-stroitelstvo/stoljarnye-i-plotnitskie-raboty--5788"
+        }
+      ],
+      "legacy_seed_paths": [
+        "remont-i-stroitelstvo/stoljarnye-i-plotnitskie-raboty--5788"
+      ]
+    },
+    {
+      "category_key": "furniture_assemblers",
+      "occupation_ids": [
+        2
+      ],
+      "specialization_ids": [
+        7,
+        8,
+        37,
+        38
+      ],
+      "service_ids": [
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81
+      ],
+      "crawl_targets": [
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 4647,
+          "relative_path": "remont-i-stroitelstvo/sborka-i-remont-mebeli--4647"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 4618,
+          "relative_path": "remont-i-stroitelstvo/izgotovlenie-mebeli--4618"
+        }
+      ],
+      "legacy_seed_paths": [
+        "remont-i-stroitelstvo/mebel/sborka-mebeli--4638",
+        "remont-i-stroitelstvo/sborka-i-remont-mebeli/sborka-komplekta-mebeli--5954",
+        "remont-i-stroitelstvo/mebel/sborka-kuhni--4641",
+        "remont-i-stroitelstvo/mebel/sobrat-kuhonnyij-garnitur--4643",
+        "remont-i-stroitelstvo/mebel/sobrat-shkaf--4635",
+        "remont-i-stroitelstvo/mebel/sborka-shkafa--4642",
+        "remont-i-stroitelstvo/mebel/sobrat-divan--4630"
+      ]
+    },
+    {
+      "category_key": "finishers",
+      "occupation_ids": [
+        2
+      ],
+      "specialization_ids": [
+        9,
+        10,
+        43,
+        44,
+        45,
+        12,
+        13,
+        14,
+        46,
+        11,
+        15
+      ],
+      "service_ids": [
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102
+      ],
+      "crawl_targets": [
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 1816,
+          "relative_path": "remont-i-stroitelstvo/remont-kvartir-i-domov--1816"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 1828,
+          "relative_path": "remont-i-stroitelstvo/remont-ofisa--1828"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 1668,
+          "relative_path": "remont-i-stroitelstvo/oboi-i-malyarnyie-rabotyi--1668"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 1749,
+          "relative_path": "remont-i-stroitelstvo/plitochnyie-rabotyi--1749"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 1757,
+          "relative_path": "remont-i-stroitelstvo/polyi-i-napolnyie-pokryitiya--1757"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 1792,
+          "relative_path": "remont-i-stroitelstvo/potolki--1792"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 5699,
+          "relative_path": "remont-i-stroitelstvo/gipsokarton--5699"
+        }
+      ],
+      "legacy_seed_paths": [
+        "remont-i-stroitelstvo/remont-kvartir-i-domov/chistovaya-otdelka--1827",
+        "remont-i-stroitelstvo/remont-kvartir-i-domov/chernovaya-otdelka--1826",
+        "remont-i-stroitelstvo/remont-kvartir-i-domov/kosmeticheskij-remont-kvartiryi--1820",
+        "remont-i-stroitelstvo/oboi-i-malyarnyie-rabotyi/poklejka-oboev--1679",
+        "remont-i-stroitelstvo/oboi-i-malyarnyie-rabotyi/pokraska-sten--1686",
+        "remont-i-stroitelstvo/oboi-i-malyarnyie-rabotyi/shtukaturka-sten--1692",
+        "remont-i-stroitelstvo/oboi-i-malyarnyie-rabotyi/shpatlevanie-poverhnosti--1690",
+        "remont-i-stroitelstvo/plitochnyie-rabotyi/ukladka-plitki--1755",
+        "remont-i-stroitelstvo/polyi-i-napolnyie-pokryitiya/ukladka-laminata--1777",
+        "remont-i-stroitelstvo/polyi-i-napolnyie-pokryitiya/ukladka-linoleuma--1778",
+        "remont-i-stroitelstvo/drugoe/montazh-peregorodok-iz-gipsokartona--5695",
+        "remont-i-stroitelstvo/drugoe/obshivka-sten-gipsokartonom--5697",
+        "remont-i-stroitelstvo/potolki/ustanovka-natyajnogo-potolka--1795"
+      ]
+    },
+    {
+      "category_key": "appliance_repair",
+      "occupation_ids": [
+        3
+      ],
+      "specialization_ids": [
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25
+      ],
+      "service_ids": [
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117
+      ],
+      "crawl_targets": [
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 2178,
+          "relative_path": "remont-i-ustanovka-tehniki/stiralnyie-mashinyi--2178"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 2140,
+          "relative_path": "remont-i-ustanovka-tehniki/posudomoechnyie-mashinyi--2140"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 2227,
+          "relative_path": "remont-i-ustanovka-tehniki/holodilniki--2227"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 6412,
+          "relative_path": "remont-i-ustanovka-tehniki/morozilnie-kameri--6412"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 6221,
+          "relative_path": "remont-i-ustanovka-tehniki/dukhovie-shkafi--6221"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 6220,
+          "relative_path": "remont-i-ustanovka-tehniki/varochnie-paneli--6220"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 2077,
+          "relative_path": "remont-i-ustanovka-tehniki/kuhonnyie-plityi--2077"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 5364,
+          "relative_path": "remont-i-ustanovka-tehniki/vytjazhki--5364"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 2063,
+          "relative_path": "remont-i-ustanovka-tehniki/konditsioneryi--2063"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 2094,
+          "relative_path": "remont-i-ustanovka-tehniki/remont-melkoj-byitovoj-tehniki--2094"
+        }
+      ],
+      "legacy_seed_paths": [
+        "remont-i-ustanovka-tehniki/stiralnyie-mashinyi/remont-stiralnoj-mashinyi--4023",
+        "remont-i-ustanovka-tehniki/posudomoechnyie-mashinyi/remont-posudomoechnyih-mashin--4064",
+        "remont-i-ustanovka-tehniki/holodilniki/remont-holodilnika--2237",
+        "remont-i-ustanovka-tehniki/kuhonnyie-plityi/remont-kuhonnoj-plityi--2079",
+        "remont-i-ustanovka-tehniki/remont-melkoj-byitovoj-tehniki/remont-melkoj-byitovoj-tehniki--2101",
+        "remont-i-ustanovka-tehniki/sushilnyie-mashinyi/remont-sushilnoj-mashinyi--4448",
+        "remont-i-ustanovka-tehniki/dukhovie-shkafi/remont-dukhovogo-shkafa--6226",
+        "remont-i-ustanovka-tehniki/varochnie-paneli/remont-varochnoi-paneli--6223",
+        "remont-i-ustanovka-tehniki/morozilnie-kameri/remont-morozilnoi-kameri--6416",
+        "remont-i-ustanovka-tehniki/remont-melkoj-byitovoj-tehniki/remont-vyityazhki--5362",
+        "remont-i-ustanovka-tehniki/remont-melkoj-byitovoj-tehniki/remont-kofemashinyi--5360"
+      ]
+    },
+    {
+      "category_key": "window_repair",
+      "occupation_ids": [
+        2
+      ],
+      "specialization_ids": [
+        26,
+        39,
+        40
+      ],
+      "service_ids": [
+        118,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        127,
+        128,
+        129,
+        130,
+        131,
+        132,
+        133,
+        134
+      ],
+      "crawl_targets": [
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 1708,
+          "relative_path": "remont-i-stroitelstvo/okna-i-balkonyi--1708"
+        }
+      ],
+      "legacy_seed_paths": [
+        "remont-i-stroitelstvo/okna-i-balkonyi/remont-okon--1725",
+        "remont-i-stroitelstvo/okna-i-balkonyi/zamena-stekol--1715",
+        "remont-i-stroitelstvo/okna-i-balkonyi/uteplenie-okon--4299",
+        "remont-i-stroitelstvo/okna-i-balkonyi/ustanovka-ili-zamena-okonnyih-ruchek--1727",
+        "remont-i-stroitelstvo/okna-i-balkonyi/germetizatsiya-mest-primyikaniya-okonnoj-ramyi--1712",
+        "remont-i-stroitelstvo/okna-i-balkonyi/germetizatsiya-okon--1713",
+        "remont-i-stroitelstvo/okna-i-balkonyi/zvukoizolyatsiya-okon--4300",
+        "remont-i-stroitelstvo/okna-i-balkonyi/diagnostika--6405"
+      ]
+    },
+    {
+      "category_key": "locks_and_doors",
+      "occupation_ids": [
+        2
+      ],
+      "specialization_ids": [
+        27,
+        28,
+        29,
+        30,
+        41,
+        42
+      ],
+      "service_ids": [
+        135,
+        136,
+        137,
+        138,
+        139,
+        140,
+        141,
+        142,
+        143,
+        144,
+        145,
+        146,
+        147,
+        148,
+        149
+      ],
+      "crawl_targets": [
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 5324,
+          "relative_path": "remont-i-stroitelstvo/remont-i-ustanovka-zamkov--5324"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 5274,
+          "relative_path": "remont-i-stroitelstvo/vskrytie-zamkov--5274"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 5311,
+          "relative_path": "remont-i-stroitelstvo/ustanovka-dverej--5311"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 5319,
+          "relative_path": "remont-i-stroitelstvo/remont-dverej--5319"
+        }
+      ],
+      "legacy_seed_paths": [
+        "remont-i-stroitelstvo/dveri-i-zamki/remont-zamka--5320",
+        "remont-i-stroitelstvo/remont-i-ustanovka-zamkov/remont-zamka-mezhkomnatnoi-dveri--6442",
+        "remont-i-stroitelstvo/dveri-i-zamki/ustanovka-zamka--5321",
+        "remont-i-stroitelstvo/remont-i-ustanovka-zamkov/ustanovka-zamka-dlya-mezhkomnatnoi-dveri--6441",
+        "remont-i-stroitelstvo/dveri-i-zamki/zamena-zamka--5323",
+        "remont-i-stroitelstvo/remont-i-ustanovka-zamkov/zamena-zamka-mezhkomnatnoi-dveri--6443",
+        "remont-i-stroitelstvo/dveri-i-zamki/zamena-tsilindra-zamka--5322",
+        "remont-i-stroitelstvo/dveri-i-zamki/vskryitie-zamka--5273",
+        "remont-i-stroitelstvo/vskrytie-zamkov/vskritie-zamka-ot-vkhodnoi-dveri--6436",
+        "remont-i-stroitelstvo/vskrytie-zamkov/vskritie-zamka-ot-mezhkomnatnoi-dveri--6437",
+        "remont-i-stroitelstvo/dveri-i-zamki/remont-dverej--5314",
+        "remont-i-stroitelstvo/dveri-i-zamki/ustanovka-mezhkomnatnoj-dveri--5291",
+        "remont-i-stroitelstvo/dveri-i-zamki/ustanovka-vhodnoj-dveri--5295"
+      ]
+    },
+    {
+      "category_key": "low_voltage",
+      "occupation_ids": [
+        2
+      ],
+      "specialization_ids": [
+        31,
+        32,
+        47,
+        48,
+        33,
+        34
+      ],
+      "service_ids": [
+        150,
+        151,
+        152,
+        153,
+        154,
+        155,
+        156,
+        157,
+        158,
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166,
+        167,
+        168,
+        169,
+        170,
+        171
+      ],
+      "crawl_targets": [
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 5784,
+          "relative_path": "remont-i-stroitelstvo/slabotochnye-sistemy--5784"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 1729,
+          "relative_path": "remont-i-stroitelstvo/ohrannyie-sistemyi-i-kontrol-dostupa--1729"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 1967,
+          "relative_path": "remont-i-stroitelstvo/umnyij-dom--1967"
+        },
+        {
+          "taxonomy_level": "specialization",
+          "source_rubric_number_id": 5798,
+          "relative_path": "remont-i-stroitelstvo/antenny--5798"
+        }
+      ],
+      "legacy_seed_paths": [
+        "remont-i-stroitelstvo/slabotochnye-sistemy--5784"
+      ]
+    }
+  ]
+}

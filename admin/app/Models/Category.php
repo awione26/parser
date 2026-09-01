@@ -65,6 +65,51 @@ class Category extends Model
     }
 
     /**
+     * Вернуть направления Яндекса, включённые во внутреннюю группу.
+     *
+     * @return BelongsToMany<YandexOccupation, $this>
+     */
+    public function yandexOccupations(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            YandexOccupation::class,
+            'category_yandex_occupations',
+            'category_id',
+            'occupation_id',
+        )->withPivot('sort_order');
+    }
+
+    /**
+     * Вернуть специализации Яндекса, включённые во внутреннюю группу.
+     *
+     * @return BelongsToMany<YandexSpecialization, $this>
+     */
+    public function yandexSpecializations(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            YandexSpecialization::class,
+            'category_yandex_specializations',
+            'category_id',
+            'specialization_id',
+        )->withPivot('sort_order');
+    }
+
+    /**
+     * Вернуть услуги Яндекса, включённые во внутреннюю группу.
+     *
+     * @return BelongsToMany<YandexService, $this>
+     */
+    public function yandexServices(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            YandexService::class,
+            'category_yandex_services',
+            'category_id',
+            'service_id',
+        )->withPivot('sort_order');
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

@@ -7,6 +7,10 @@ use App\Http\Requests\Admin\ParserCategory\StoreRequest;
 use App\Http\Requests\Admin\ParserCategory\UpdateRequest;
 use App\Models\Category;
 use App\Models\ParserCategory;
+use App\Models\ParserCategoryTarget;
+use App\Models\YandexOccupation;
+use App\Models\YandexService;
+use App\Models\YandexSpecialization;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -27,7 +31,13 @@ final class ParserCategoryController extends Controller
     public function index(): View
     {
         $rows = ParserCategory::query()
-            ->with('category')
+            ->with(['category' => function ($query): void {
+                $query->withCount([
+                    'yandexOccupations',
+                    'yandexSpecializations',
+                    'yandexServices',
+                ]);
+            }])
             ->join('categories', 'categories.id', '=', 'parser_categories.category_id')
             ->select('parser_categories.*')
             ->orderBy('parser_categories.sort_order')
@@ -97,6 +107,8 @@ final class ParserCategoryController extends Controller
                 'created_at' => $now,
                 'updated_at' => $now,
             ])->save();
+
+            $this->replaceTargets($configuration, $data['seed_paths'], $now);
         });
 
         return redirect()
@@ -145,6 +157,8 @@ final class ParserCategoryController extends Controller
                     'sort_order' => (int) $data['sort_order'],
                     'updated_at' => $now,
                 ])->save();
+
+                $this->replaceTargets($configuration, $data['seed_paths'], $now);
             },
         );
 
@@ -198,5 +212,91 @@ final class ParserCategoryController extends Controller
         $value = trim((string) $note);
 
         return $value === '' ? null : $value;
+    }
+
+    /**
+     * Заменить нормализованные цели обхода в той же транзакции, что и legacy JSON.
+     *
+     * @param  list<string>  $seedPaths
+     */
+    private function replaceTargets(
+        ParserCategory $configuration,
+        array $seedPaths,
+        CarbonImmutable $now,
+    ): void {
+        $rubricIds = array_map(
+            fn (string $path): int => $this->rubricIdFromPath($path),
+            $seedPaths,
+        );
+        $levels = $this->taxonomyLevels($rubricIds);
+
+        ParserCategoryTarget::query()
+            ->where('category_id', $configuration->category_id)
+            ->delete();
+
+        $rows = [];
+        foreach (array_values($seedPaths) as $index => $path) {
+            $rubricId = $rubricIds[$index];
+            $rows[] = [
+                'category_id' => $configuration->category_id,
+                'taxonomy_level' => $levels[$rubricId] ?? ParserCategoryTarget::LEVEL_UNKNOWN,
+                'source_rubric_number_id' => $rubricId,
+                'relative_path' => $path,
+                'is_active' => true,
+                'sort_order' => ($index + 1) * 10,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        ParserCategoryTarget::query()->insert($rows);
+    }
+
+    /**
+     * Извлечь обязательный числовой ID рубрики из проверенного относительного пути.
+     */
+    private function rubricIdFromPath(string $path): int
+    {
+        if (preg_match('/--([1-9][0-9]*)$/D', $path, $matches) !== 1) {
+            throw new \LogicException('Validated seed path has no rubric number ID.');
+        }
+
+        return (int) $matches[1];
+    }
+
+    /**
+     * Однозначно определить уровень каждого ID по нормализованной таксономии.
+     *
+     * ID, отсутствующий в справочнике или найденный на нескольких уровнях,
+     * получает уровень unknown и всё равно остаётся доступен парсеру.
+     *
+     * @param  list<int>  $rubricIds
+     * @return array<int, string>
+     */
+    private function taxonomyLevels(array $rubricIds): array
+    {
+        $matches = [];
+        $models = [
+            ParserCategoryTarget::LEVEL_OCCUPATION => YandexOccupation::class,
+            ParserCategoryTarget::LEVEL_SPECIALIZATION => YandexSpecialization::class,
+            ParserCategoryTarget::LEVEL_SERVICE => YandexService::class,
+        ];
+
+        foreach ($models as $level => $model) {
+            foreach ($model::query()
+                ->whereIn('external_number_id', $rubricIds)
+                ->pluck('external_number_id') as $rubricId) {
+                $matches[(int) $rubricId][] = $level;
+            }
+        }
+
+        $levels = [];
+        foreach ($matches as $rubricId => $matchedLevels) {
+            if (count($matchedLevels) === 1) {
+                $levels[$rubricId] = $matchedLevels[0];
+            }
+        }
+
+        return $levels;
     }
 }

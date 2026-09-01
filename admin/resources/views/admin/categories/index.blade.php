@@ -12,12 +12,18 @@
             </div>
 
             <div class="card">
-                <div class="card-header d-flex align-items-center justify-content-between">
+                <div class="card-header d-flex flex-wrap align-items-center justify-content-between">
                     <span>Всего: {{ $rows->count() }}</span>
-                    <a href="{{ route('admin.categories.create') }}" class="btn btn-info btn-sm">
-                        <i class="fas fa-plus" aria-hidden="true"></i>
-                        Добавить
-                    </a>
+                    <div>
+                        <a href="{{ route('admin.catalog.index') }}" class="btn btn-outline-info btn-sm mr-1">
+                            <i class="fas fa-sitemap" aria-hidden="true"></i>
+                            Каталог Яндекса
+                        </a>
+                        <a href="{{ route('admin.categories.create') }}" class="btn btn-info btn-sm">
+                            <i class="fas fa-plus" aria-hidden="true"></i>
+                            Добавить
+                        </a>
+                    </div>
                 </div>
 
                 <div class="card-body p-0">
@@ -29,6 +35,7 @@
                                 <th scope="col" class="text-nowrap">Порядок</th>
                                 <th scope="col">Категория</th>
                                 <th scope="col">Пути рубрик</th>
+                                <th scope="col">Справочник Яндекса</th>
                                 <th scope="col">Состояние</th>
                                 <th scope="col" class="text-nowrap">Действия</th>
                             </tr>
@@ -53,6 +60,22 @@
                                                 @endforeach
                                             </ul>
                                         </details>
+                                    </td>
+                                    <td class="text-nowrap">
+                                        <a
+                                            href="{{ route('admin.catalog.index', ['group' => $row->category_id]) }}"
+                                            aria-label="Открыть справочник для {{ $row->category->name }}"
+                                        >
+                                            <span class="badge badge-light border" title="Направления">
+                                                Н: {{ $row->category->yandex_occupations_count }}
+                                            </span>
+                                            <span class="badge badge-light border" title="Специализации">
+                                                С: {{ $row->category->yandex_specializations_count }}
+                                            </span>
+                                            <span class="badge badge-light border" title="Услуги">
+                                                У: {{ $row->category->yandex_services_count }}
+                                            </span>
+                                        </a>
                                     </td>
                                     <td>
                                         @if ($row->is_active)
@@ -110,7 +133,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center py-4">
+                                    <td colspan="6" class="text-center py-4">
                                         Категории для парсинга пока не настроены.
                                     </td>
                                 </tr>

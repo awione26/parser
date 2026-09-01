@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\ParserCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\Concerns\CreatesParserSchema;
 use Tests\TestCase;
@@ -295,6 +296,75 @@ class ParserCategoryManagementTest extends TestCase
             ->assertRedirect(route('admin.categories.index'));
 
         $this->assertSame($categoryId, ParserCategory::query()->findOrFail($categoryId)->category_id);
+    }
+
+    public function test_category_form_atomically_replaces_normalized_parser_targets(): void
+    {
+        $admin = $this->createUser('admin', User::ROLE_ADMIN);
+        DB::connection('sqlite')->table('yandex_occupations')->insert([
+            'external_id_raw' => '/remont-i-stroitel_stvo',
+            'external_number_id' => 201,
+            'slug' => 'remont-i-stroitelstvo',
+            'name' => 'Ремонт и строительство',
+            'source_url' => null,
+            'verification_status' => 'confirmed',
+            'created_at' => '2026-09-01 10:00:00',
+            'updated_at' => '2026-09-01 10:00:00',
+        ]);
+        DB::connection('sqlite')->table('yandex_services')->insert([
+            'specialization_id' => null,
+            'external_id_raw' => '/montazh',
+            'external_number_id' => 202,
+            'slug' => 'montazh',
+            'name' => 'Монтаж',
+            'source_url' => null,
+            'verification_status' => 'discovered',
+            'created_at' => '2026-09-01 10:00:00',
+            'updated_at' => '2026-09-01 10:00:00',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.categories.store'), [
+                ...$this->validPayload('normalized'),
+                'seed_paths' => "category/remont--201\ncategory/unknown--999",
+            ])
+            ->assertRedirect(route('admin.categories.index'));
+
+        $row = ParserCategory::query()->whereHas(
+            'category',
+            fn ($query) => $query->where('key', 'normalized'),
+        )->firstOrFail();
+        $this->assertDatabaseHas('parser_category_targets', [
+            'category_id' => $row->category_id,
+            'source_rubric_number_id' => 201,
+            'taxonomy_level' => 'occupation',
+            'sort_order' => 10,
+        ], 'sqlite');
+        $this->assertDatabaseHas('parser_category_targets', [
+            'category_id' => $row->category_id,
+            'source_rubric_number_id' => 999,
+            'taxonomy_level' => 'unknown',
+            'sort_order' => 20,
+        ], 'sqlite');
+
+        $this->actingAs($admin)
+            ->put(route('admin.categories.update', $row), [
+                ...$this->validUpdatePayload(),
+                'seed_paths' => 'category/montazh--202',
+            ])
+            ->assertRedirect(route('admin.categories.index'));
+
+        $this->assertDatabaseCount('parser_category_targets', 1, 'sqlite');
+        $this->assertDatabaseMissing('parser_category_targets', [
+            'category_id' => $row->category_id,
+            'source_rubric_number_id' => 201,
+        ], 'sqlite');
+        $this->assertDatabaseHas('parser_category_targets', [
+            'category_id' => $row->category_id,
+            'source_rubric_number_id' => 202,
+            'taxonomy_level' => 'service',
+            'relative_path' => 'category/montazh--202',
+        ], 'sqlite');
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Настройки категории, которую Python-парсер должен обходить.
@@ -36,6 +37,16 @@ class ParserCategory extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'category_id');
+    }
+
+    /**
+     * Вернуть нормализованные цели обхода этой категории.
+     *
+     * @return HasMany<ParserCategoryTarget, $this>
+     */
+    public function targets(): HasMany
+    {
+        return $this->hasMany(ParserCategoryTarget::class, 'category_id', 'category_id');
     }
 
     /**
