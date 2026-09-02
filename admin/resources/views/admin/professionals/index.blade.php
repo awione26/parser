@@ -32,10 +32,14 @@
                             <label class="filter-label" for="filter-category">Категория Яндекс.Каталога</label>
                             <select id="filter-category" class="custom-select">
                                 <option value="">Все категории</option>
-                                @foreach($catalogTargets as $target)
-                                    <option value="{{ $target->token }}">
-                                        {{ $target->name }} (№ {{ $target->external_number_id }})
-                                    </option>
+                                @foreach($catalogTargetGroups as $group)
+                                    <optgroup label="{{ $group->name }}">
+                                        @foreach($group->targets as $target)
+                                            <option value="{{ $target->token }}">
+                                                {{ $target->name }} (№ {{ $target->external_number_id }})
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
                                 @endforeach
                             </select>
                         </div>
