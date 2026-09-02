@@ -18,10 +18,38 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE_REVISION = "20260820_01"
 LEGACY_REVISION = "20260826_02"
 SETTINGS_REVISION = "20260827_05"
-HEAD_REVISION = "20260902_10"
+HEAD_REVISION = "20260902_11"
 TAXONOMY_SNAPSHOT = json.loads(
     (ROOT / "migrations/data/20260901_yandex_taxonomy.json").read_text(encoding="utf-8")
 )
+
+
+def found_taxonomy_ids(table_name: str) -> set[int]:
+    """Вернуть ID всех строк, кроме точных ненайденных legacy-заглушек."""
+
+    return {
+        int(row["id"])
+        for row in TAXONOMY_SNAPSHOT[table_name]
+        if not (
+            row["verification_status"] == "unverified"
+            and row["external_id_raw"] is None
+            and row["external_number_id"] is None
+            and row["slug"] is None
+            and row["source_url"] is None
+        )
+    }
+
+
+def found_mapping_count(manifest_key: str, table_name: str) -> int:
+    """Посчитать связи групп только с найденными узлами справочника."""
+
+    found_ids = found_taxonomy_ids(table_name)
+    return sum(
+        1
+        for group in TAXONOMY_SNAPSHOT["groups"]
+        for node_id in group[manifest_key]
+        if int(node_id) in found_ids
+    )
 
 
 def alembic_config(*, output_buffer: StringIO | None = None) -> Config:
@@ -227,18 +255,27 @@ def taxonomy_schema_state(database_url: str) -> tuple[dict[str, int], int, int]:
                 )
                 or 0
             )
-            unresolved_with_id = int(
+            not_found_rows = int(
                 connection.scalar(
                     sa.text(
-                        "SELECT COUNT(*) FROM yandex_services "
-                        "WHERE verification_status = 'unverified' "
-                        "AND (external_id_raw IS NOT NULL OR external_number_id IS NOT NULL "
-                        "OR slug IS NOT NULL OR source_url IS NOT NULL)"
+                        "SELECT COUNT(*) FROM ("
+                        "SELECT verification_status, external_id_raw, external_number_id, "
+                        "slug, source_url "
+                        "FROM yandex_occupations UNION ALL "
+                        "SELECT verification_status, external_id_raw, external_number_id, "
+                        "slug, source_url "
+                        "FROM yandex_specializations UNION ALL "
+                        "SELECT verification_status, external_id_raw, external_number_id, "
+                        "slug, source_url "
+                        "FROM yandex_services"
+                        ") AS taxonomy_rows WHERE verification_status = 'unverified' "
+                        "AND external_id_raw IS NULL AND external_number_id IS NULL "
+                        "AND slug IS NULL AND source_url IS NULL"
                     )
                 )
                 or 0
             )
-        return counts, invalid_urls, unresolved_with_id
+        return counts, invalid_urls, not_found_rows
     finally:
         engine.dispose()
 
@@ -392,22 +429,20 @@ def test_fresh_upgrade_creates_plaintext_schema_without_legacy_key(
         )
         for position, definition in enumerate(DEFAULT_CATEGORIES.values(), start=1)
     ]
-    taxonomy_counts, invalid_urls, unresolved_with_id = taxonomy_schema_state(database_url)
+    taxonomy_counts, invalid_urls, not_found_rows = taxonomy_schema_state(database_url)
     assert taxonomy_counts == {
-        "yandex_occupations": len(TAXONOMY_SNAPSHOT["yandex_occupations"]),
-        "yandex_specializations": len(TAXONOMY_SNAPSHOT["yandex_specializations"]),
-        "yandex_services": len(TAXONOMY_SNAPSHOT["yandex_services"]),
-        "category_yandex_occupations": sum(
-            len(group["occupation_ids"]) for group in TAXONOMY_SNAPSHOT["groups"]
+        "yandex_occupations": len(found_taxonomy_ids("yandex_occupations")),
+        "yandex_specializations": len(found_taxonomy_ids("yandex_specializations")),
+        "yandex_services": len(found_taxonomy_ids("yandex_services")),
+        "category_yandex_occupations": found_mapping_count("occupation_ids", "yandex_occupations"),
+        "category_yandex_specializations": found_mapping_count(
+            "specialization_ids", "yandex_specializations"
         ),
-        "category_yandex_specializations": sum(
-            len(group["specialization_ids"]) for group in TAXONOMY_SNAPSHOT["groups"]
-        ),
-        "category_yandex_services": 171,
+        "category_yandex_services": found_mapping_count("service_ids", "yandex_services"),
         "parser_category_targets": 34,
     }
     assert invalid_urls == 0
-    assert unresolved_with_id == 0
+    assert not_found_rows == 0
     assert category_metadata_state(database_url) == {
         definition.key: (definition.name, definition.note or None)
         for definition in DEFAULT_CATEGORIES.values()
@@ -849,6 +884,250 @@ def test_catalog_authority_backfills_evidence_and_disables_legacy_target(
     )
 
 
+def test_unverified_catalog_cleanup_preserves_enriched_rows_and_references(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Не считать ненайденной строку, если хотя бы одно поле источника заполнено."""
+
+    database_url = sqlite_url(tmp_path / "catalog-cleanup-references.sqlite")
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    command.upgrade(alembic_config(), "20260902_10")
+    engine = sa.create_engine(database_url)
+    now = datetime(2026, 9, 2, 11, 0, 0)
+    rubric_id = 900001
+    try:
+        with engine.begin() as connection:
+            enriched_rows = connection.execute(
+                sa.text(
+                    "SELECT service.id, mapping.category_id "
+                    "FROM yandex_services AS service "
+                    "JOIN category_yandex_services AS mapping "
+                    "ON mapping.service_id = service.id "
+                    "WHERE service.verification_status = 'unverified' "
+                    "ORDER BY service.id LIMIT 4"
+                )
+            ).all()
+            assert len(enriched_rows) == 4
+            service_id, category_id = enriched_rows[0]
+            slug_only_service_id = enriched_rows[1][0]
+            url_only_service_id = enriched_rows[2][0]
+            raw_id_only_service_id = enriched_rows[3][0]
+            connection.execute(
+                sa.text(
+                    "UPDATE yandex_services SET external_number_id = :rubric_id, "
+                    "updated_at = :now WHERE id = :service_id"
+                ),
+                {
+                    "rubric_id": rubric_id,
+                    "service_id": service_id,
+                    "now": now,
+                },
+            )
+            connection.execute(
+                sa.text(
+                    "UPDATE yandex_services SET slug = '/test/slug-only', "
+                    "updated_at = :now WHERE id = :service_id"
+                ),
+                {"service_id": slug_only_service_id, "now": now},
+            )
+            connection.execute(
+                sa.text(
+                    "UPDATE yandex_services SET source_url = "
+                    "'https://uslugi.yandex.ru/category/test/url-only--900003', "
+                    "updated_at = :now WHERE id = :service_id"
+                ),
+                {"service_id": url_only_service_id, "now": now},
+            )
+            connection.execute(
+                sa.text(
+                    "UPDATE yandex_services SET external_id_raw = '/test/raw-id-only', "
+                    "updated_at = :now WHERE id = :service_id"
+                ),
+                {"service_id": raw_id_only_service_id, "now": now},
+            )
+            connection.execute(
+                sa.text(
+                    "INSERT INTO parser_category_targets ("
+                    "category_id, taxonomy_level, source_rubric_number_id, relative_path, "
+                    "is_active, sort_order, created_at, updated_at) VALUES ("
+                    ":category_id, 'service', :rubric_id, :relative_path, "
+                    "0, 9990, :now, :now)"
+                ),
+                {
+                    "category_id": category_id,
+                    "rubric_id": rubric_id,
+                    "relative_path": f"test/unverified-service--{rubric_id}",
+                    "now": now,
+                },
+            )
+            connection.execute(
+                sa.text(
+                    "INSERT INTO professionals ("
+                    "id, source, source_profile_id, profile_url, profile_url_hash, "
+                    "phone_status, age_as_of, content_hash, parser_version, "
+                    "first_seen_at, last_seen_at, last_scraped_at) VALUES ("
+                    "902, 'uslugi.yandex.ru', 'catalog-cleanup-reference', "
+                    "'https://uslugi.yandex.ru/profile/Catalog-902', :url_hash, "
+                    "'not_requested', '2026-09-02', :content_hash, '0.1.0', "
+                    ":now, :now, :now)"
+                ),
+                {"url_hash": "e" * 64, "content_hash": "f" * 64, "now": now},
+            )
+            connection.execute(
+                sa.text(
+                    "INSERT INTO professional_categories "
+                    "(professional_id, category_id, first_seen_at, last_seen_at) "
+                    "VALUES (902, :category_id, :now, :now)"
+                ),
+                {"category_id": category_id, "now": now},
+            )
+            connection.execute(
+                sa.text(
+                    "INSERT INTO professional_category_rubrics ("
+                    "professional_id, category_id, source_rubric_number_id, "
+                    "source_rubric_level, first_seen_at, last_seen_at) VALUES ("
+                    "902, :category_id, :rubric_id, 'service', :now, :now)"
+                ),
+                {
+                    "category_id": category_id,
+                    "rubric_id": rubric_id,
+                    "now": now,
+                },
+            )
+    finally:
+        engine.dispose()
+
+    command.upgrade(alembic_config(), "head")
+
+    engine = sa.create_engine(database_url)
+    try:
+        with engine.connect() as connection:
+            assert connection.scalar(sa.text("SELECT version_num FROM alembic_version")) == (
+                HEAD_REVISION
+            )
+            preserved_rows = connection.execute(
+                sa.text(
+                    "SELECT id, external_id_raw, external_number_id, slug, source_url "
+                    "FROM yandex_services "
+                    "WHERE id IN (:id, :slug_id, :url_id, :raw_id) ORDER BY id"
+                ),
+                {
+                    "id": service_id,
+                    "slug_id": slug_only_service_id,
+                    "url_id": url_only_service_id,
+                    "raw_id": raw_id_only_service_id,
+                },
+            ).all()
+            assert preserved_rows == [
+                (service_id, None, rubric_id, None, None),
+                (slug_only_service_id, None, None, "/test/slug-only", None),
+                (
+                    url_only_service_id,
+                    None,
+                    None,
+                    None,
+                    "https://uslugi.yandex.ru/category/test/url-only--900003",
+                ),
+                (raw_id_only_service_id, "/test/raw-id-only", None, None, None),
+            ]
+            assert (
+                connection.scalar(
+                    sa.text(
+                        "SELECT COUNT(*) FROM yandex_services "
+                        "WHERE verification_status = 'unverified' "
+                        "AND external_id_raw IS NULL AND external_number_id IS NULL "
+                        "AND slug IS NULL AND source_url IS NULL"
+                    )
+                )
+                == 0
+            )
+            assert (
+                connection.scalar(
+                    sa.text(
+                        "SELECT COUNT(*) FROM category_yandex_services "
+                        "WHERE service_id IN (:id, :slug_id, :url_id, :raw_id)"
+                    ),
+                    {
+                        "id": service_id,
+                        "slug_id": slug_only_service_id,
+                        "url_id": url_only_service_id,
+                        "raw_id": raw_id_only_service_id,
+                    },
+                )
+                == 4
+            )
+            assert (
+                connection.scalar(
+                    sa.text(
+                        "SELECT COUNT(*) FROM parser_category_targets "
+                        "WHERE taxonomy_level = 'service' AND source_rubric_number_id = :rubric_id"
+                    ),
+                    {"rubric_id": rubric_id},
+                )
+                == 1
+            )
+            assert (
+                connection.scalar(
+                    sa.text(
+                        "SELECT COUNT(*) FROM professional_category_rubrics "
+                        "WHERE source_rubric_level = 'service' "
+                        "AND source_rubric_number_id = :rubric_id"
+                    ),
+                    {"rubric_id": rubric_id},
+                )
+                == 1
+            )
+    finally:
+        engine.dispose()
+
+
+def test_unverified_catalog_cleanup_rejects_found_children(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Не удалять ненайденного родителя существующей на сайте категории."""
+
+    database_url = sqlite_url(tmp_path / "catalog-cleanup-child.sqlite")
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    command.upgrade(alembic_config(), "20260902_10")
+    engine = sa.create_engine(database_url)
+    try:
+        with engine.begin() as connection:
+            unverified_specialization_id = connection.scalar(
+                sa.text(
+                    "SELECT id FROM yandex_specializations "
+                    "WHERE verification_status = 'unverified' ORDER BY id LIMIT 1"
+                )
+            )
+            found_service_id = connection.scalar(
+                sa.text(
+                    "SELECT id FROM yandex_services "
+                    "WHERE verification_status <> 'unverified' ORDER BY id LIMIT 1"
+                )
+            )
+            connection.execute(
+                sa.text(
+                    "UPDATE yandex_services SET specialization_id = :specialization_id "
+                    "WHERE id = :service_id"
+                ),
+                {
+                    "specialization_id": unverified_specialization_id,
+                    "service_id": found_service_id,
+                },
+            )
+    finally:
+        engine.dispose()
+
+    with pytest.raises(
+        RuntimeError,
+        match="preserved services below not-found specializations: 1",
+    ):
+        command.upgrade(alembic_config(), "head")
+
+    assert schema_state(database_url)[2] == "20260902_10"
+
+
 def test_upgrade_fails_before_ddl_when_legacy_key_is_missing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -935,6 +1214,12 @@ def test_full_offline_sql_contains_plaintext_schema(monkeypatch: pytest.MonkeyPa
     assert "CREATE TABLE yandex_services" in sql
     assert "CREATE TABLE parser_category_targets" in sql
     assert "CREATE TABLE category_yandex_services" in sql
+    assert "CREATE TEMPORARY TABLE alembic_unverified_catalog_cleanup_guard" in sql
+    assert "DELETE FROM category_yandex_services WHERE service_id IN" in sql
+    assert (
+        "DELETE FROM yandex_services WHERE yandex_services.verification_status = 'unverified'"
+        in sql
+    )
     assert "yabs.yandex.ru" not in sql
 
 

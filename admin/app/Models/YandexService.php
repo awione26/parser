@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
- * Конкретная услуга из публичного каталога Яндекс Услуг.
+ * Конкретная услуга из публичного каталога Яндекс Услуг, доступная в CRUD админки.
  */
 class YandexService extends Model
 {

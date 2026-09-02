@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\ProfessionalController;
 use App\Http\Controllers\Admin\ProfessionalDeletionController;
 use App\Http\Controllers\Admin\ProfessionalExportController;
 use App\Http\Controllers\Admin\YandexCatalogController;
+use App\Http\Controllers\Admin\YandexCatalogNodeController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -34,6 +35,34 @@ Route::middleware('auth')->group(function (): void {
             ->name('admin.settings.update');
         Route::get('catalog', [YandexCatalogController::class, 'index'])
             ->name('admin.catalog.index');
+        Route::get('catalog/create', [YandexCatalogNodeController::class, 'create'])
+            ->name('admin.catalog.create');
+        Route::post('catalog', [YandexCatalogNodeController::class, 'store'])
+            ->name('admin.catalog.store');
+        Route::get(
+            'catalog/{category}/{taxonomyLevel}/{catalogNode}/edit',
+            [YandexCatalogNodeController::class, 'edit'],
+        )
+            ->whereNumber('category')
+            ->where('taxonomyLevel', 'occupation|specialization|service')
+            ->whereNumber('catalogNode')
+            ->name('admin.catalog.edit');
+        Route::put(
+            'catalog/{category}/{taxonomyLevel}/{catalogNode}',
+            [YandexCatalogNodeController::class, 'update'],
+        )
+            ->whereNumber('category')
+            ->where('taxonomyLevel', 'occupation|specialization|service')
+            ->whereNumber('catalogNode')
+            ->name('admin.catalog.update');
+        Route::delete(
+            'catalog/{category}/{taxonomyLevel}/{catalogNode}',
+            [YandexCatalogNodeController::class, 'destroy'],
+        )
+            ->whereNumber('category')
+            ->where('taxonomyLevel', 'occupation|specialization|service')
+            ->whereNumber('catalogNode')
+            ->name('admin.catalog.destroy');
         Route::patch(
             'catalog/{category}/{taxonomyLevel}/{catalogNode}/parsing',
             [YandexCatalogController::class, 'updateParsing'],

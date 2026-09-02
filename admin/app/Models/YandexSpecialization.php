@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Специализация из публичного каталога Яндекс Услуг.
+ * Специализация из публичного каталога Яндекс Услуг, доступная в CRUD админки.
  */
 class YandexSpecialization extends Model
 {

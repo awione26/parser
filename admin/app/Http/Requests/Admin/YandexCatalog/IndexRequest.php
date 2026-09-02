@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin\YandexCatalog;
 
 use App\Models\Category;
+use App\Support\YandexCatalog;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -31,7 +32,7 @@ class IndexRequest extends FormRequest
             'group' => ['nullable', 'integer', Rule::exists(Category::class, 'id')],
             'status' => [
                 'nullable',
-                Rule::in(['confirmed', 'discovered', 'legacy', 'unverified']),
+                Rule::in(YandexCatalog::USABLE_STATUSES),
             ],
             'has_id' => ['nullable', Rule::in(['0', '1'])],
             'used_for_parsing' => ['nullable', Rule::in(['0', '1'])],

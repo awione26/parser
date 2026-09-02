@@ -7,9 +7,7 @@ use App\Http\Requests\Admin\YandexCatalog\UpdateParsingRequest;
 use App\Models\Category;
 use App\Models\ParserCategory;
 use App\Models\ParserCategoryTarget;
-use App\Models\YandexOccupation;
-use App\Models\YandexService;
-use App\Models\YandexSpecialization;
+use App\Support\YandexCatalog;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
@@ -25,32 +23,6 @@ use Illuminate\Validation\ValidationException;
  */
 final class YandexCatalogController extends Controller
 {
-    /** @var list<string> */
-    private const array USABLE_VERIFICATION_STATUSES = [
-        'confirmed',
-        'discovered',
-        'legacy',
-    ];
-
-    /** @var array<string, array{model: class-string<Model>, mapping: string, foreign_key: string}> */
-    private const array TAXONOMY_LEVELS = [
-        ParserCategoryTarget::LEVEL_OCCUPATION => [
-            'model' => YandexOccupation::class,
-            'mapping' => 'category_yandex_occupations',
-            'foreign_key' => 'occupation_id',
-        ],
-        ParserCategoryTarget::LEVEL_SPECIALIZATION => [
-            'model' => YandexSpecialization::class,
-            'mapping' => 'category_yandex_specializations',
-            'foreign_key' => 'specialization_id',
-        ],
-        ParserCategoryTarget::LEVEL_SERVICE => [
-            'model' => YandexService::class,
-            'mapping' => 'category_yandex_services',
-            'foreign_key' => 'service_id',
-        ],
-    ];
-
     /** @var array<string, string> */
     private const array STATUS_LABELS = [
         'confirmed' => 'Подтверждено',
@@ -104,13 +76,13 @@ final class YandexCatalogController extends Controller
             $status = (string) $row->target_verification_status;
             $row->status_label = self::STATUS_LABELS[$status] ?? 'Неизвестный статус';
             $row->status_badge = self::STATUS_BADGES[$status] ?? 'secondary';
-            $row->safe_source_url = $this->safeSourceUrl($row->target_source_url);
+            $row->safe_source_url = YandexCatalog::safeSourceUrl($row->target_source_url);
             $row->used_for_parsing = (bool) $row->used_for_parsing;
-            $urlPath = $this->crawlPath(
+            $urlPath = YandexCatalog::crawlPath(
                 $row->safe_source_url,
                 $row->target_external_number_id,
             );
-            $catalogPath = $this->catalogPath(
+            $catalogPath = YandexCatalog::catalogPath(
                 $row->target_slug,
                 $row->target_external_number_id,
             );
@@ -119,7 +91,7 @@ final class YandexCatalogController extends Controller
                 && hash_equals($catalogPath, $urlPath)
                 && in_array(
                     $row->target_verification_status,
-                    self::USABLE_VERIFICATION_STATUSES,
+                    YandexCatalog::USABLE_STATUSES,
                     true,
                 );
 
@@ -131,7 +103,7 @@ final class YandexCatalogController extends Controller
             'rows' => $rows,
             'groups' => $this->catalogGroups(),
             'filters' => $filters,
-            'statusOptions' => self::STATUS_LABELS,
+            'statusOptions' => YandexCatalog::STATUS_LABELS,
         ]);
     }
 
@@ -145,11 +117,11 @@ final class YandexCatalogController extends Controller
         int $catalogNode,
     ): RedirectResponse {
         $node = $this->linkedCatalogNode($category, $taxonomyLevel, $catalogNode);
-        $urlPath = $this->crawlPath(
-            $this->safeSourceUrl($node->getAttribute('source_url')),
+        $urlPath = YandexCatalog::crawlPath(
+            YandexCatalog::safeSourceUrl($node->getAttribute('source_url')),
             $node->getAttribute('external_number_id'),
         );
-        $relativePath = $this->catalogPath(
+        $relativePath = YandexCatalog::catalogPath(
             $node->getAttribute('slug'),
             $node->getAttribute('external_number_id'),
         );
@@ -160,7 +132,7 @@ final class YandexCatalogController extends Controller
             || ! hash_equals($relativePath, $urlPath)
             || ! in_array(
                 $node->getAttribute('verification_status'),
-                self::USABLE_VERIFICATION_STATUSES,
+                YandexCatalog::USABLE_STATUSES,
                 true,
             )
         ) {
@@ -532,34 +504,6 @@ final class YandexCatalogController extends Controller
     }
 
     /**
-     * Разрешить внешнюю ссылку только на канонический HTTPS-хост Яндекс Услуг.
-     */
-    private function safeSourceUrl(mixed $url): ?string
-    {
-        $value = trim((string) $url);
-        if ($value === '' || filter_var($value, FILTER_VALIDATE_URL) === false) {
-            return null;
-        }
-
-        $parts = parse_url($value);
-        if (
-            ! is_array($parts)
-            || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
-            || strtolower((string) ($parts['host'] ?? '')) !== 'uslugi.yandex.ru'
-            || isset($parts['user'])
-            || isset($parts['pass'])
-            || isset($parts['port'])
-            || isset($parts['query'])
-            || isset($parts['fragment'])
-            || ! str_starts_with((string) ($parts['path'] ?? ''), '/')
-        ) {
-            return null;
-        }
-
-        return $value;
-    }
-
-    /**
      * Получить узел требуемого уровня и проверить его связь с группой мастеров.
      */
     private function linkedCatalogNode(
@@ -567,7 +511,7 @@ final class YandexCatalogController extends Controller
         string $taxonomyLevel,
         int $catalogNode,
     ): Model {
-        $definition = self::TAXONOMY_LEVELS[$taxonomyLevel] ?? null;
+        $definition = YandexCatalog::definition($taxonomyLevel);
         abort_if($definition === null, 404);
 
         $modelClass = $definition['model'];
@@ -580,63 +524,6 @@ final class YandexCatalogController extends Controller
         abort_unless($isLinked, 404);
 
         return $node;
-    }
-
-    /**
-     * Преобразовать канонический URL каталога в безопасный относительный путь обхода.
-     */
-    private function crawlPath(?string $url, mixed $rubricId): ?string
-    {
-        if ($url === null || ! is_int($rubricId) || $rubricId <= 0) {
-            return null;
-        }
-
-        $absolutePath = (string) parse_url($url, PHP_URL_PATH);
-        $seedPattern = '(?:[a-z0-9]+(?:-[a-z0-9]+)*\/)*'
-            .'[a-z0-9]+(?:-[a-z0-9]+)*--'.preg_quote((string) $rubricId, '/');
-        if (preg_match(
-            '/\A\/(?:[0-9]+-[a-z0-9]+(?:-[a-z0-9]+)*\/)?category\/(?<seed>'.$seedPattern.')\z/D',
-            $absolutePath,
-            $matches,
-        ) !== 1) {
-            return null;
-        }
-
-        return $matches['seed'];
-    }
-
-    /**
-     * Построить путь парсера из slug каталога и проверить его числовой ID.
-     */
-    private function catalogPath(mixed $slug, mixed $rubricId): ?string
-    {
-        if (
-            ! is_string($slug)
-            || $slug === ''
-            || $slug !== trim($slug)
-            || ! str_starts_with($slug, '/')
-            || str_ends_with($slug, '/')
-            || ! is_int($rubricId)
-            || $rubricId <= 0
-        ) {
-            return null;
-        }
-
-        $path = substr($slug, 1);
-        $suffix = "--{$rubricId}";
-        if (str_ends_with($path, $suffix)) {
-            return null;
-        }
-        $path .= $suffix;
-
-        if (preg_match(
-            '/\A(?:[a-z0-9]+(?:-[a-z0-9]+)*\/)*[a-z0-9]+(?:-[a-z0-9]+)*'.preg_quote($suffix, '/').'\z/D',
-            $path,
-        ) !== 1) {
-            return null;
-        }
-
-        return $path;
     }
 
     /**

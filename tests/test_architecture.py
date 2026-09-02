@@ -173,9 +173,55 @@ def test_runtime_roles_separate_parser_category_read_and_admin_write() -> None:
         "TO 'uslugi_admin'@'%';" in grant_script
     )
     assert (
-        "GRANT SELECT, INSERT, UPDATE ON ${database}.parser_category_targets "
+        "GRANT SELECT, INSERT, UPDATE, DELETE ON ${database}.parser_category_targets "
         "TO 'uslugi_admin'@'%';" in grant_script
     )
     assert "DELETE ON ${database}.parser_categories" not in grant_script
-    assert "DELETE ON ${database}.parser_category_targets" not in grant_script
     assert "INSERT, UPDATE ON ${database}.parser_categories TO 'uslugi_parser'" not in grant_script
+
+
+def test_runtime_admin_can_manage_only_normalized_catalog_tables() -> None:
+    """Разрешить CRUD справочника, не открывая изменение истории мастеров."""
+
+    grant_script = (PACKAGE.parents[1] / "docker/mysql/grant-runtime-users.sh").read_text(
+        encoding="utf-8"
+    )
+
+    for table_name in (
+        "yandex_occupations",
+        "yandex_specializations",
+        "yandex_services",
+    ):
+        assert (
+            f"GRANT SELECT, INSERT, UPDATE ON ${{database}}.{table_name} "
+            "TO 'uslugi_admin'@'%';" in grant_script
+        )
+        assert (
+            f"GRANT SELECT, INSERT, UPDATE, DELETE ON ${{database}}.{table_name} "
+            "TO 'uslugi_admin'@'%';" not in grant_script
+        )
+
+    for table_name in (
+        "category_yandex_occupations",
+        "category_yandex_specializations",
+        "category_yandex_services",
+    ):
+        assert (
+            f"GRANT SELECT, INSERT, UPDATE, DELETE ON ${{database}}.{table_name} "
+            "TO 'uslugi_admin'@'%';" in grant_script
+        )
+
+    assert "UPDATE ON ${database}.categories TO 'uslugi_admin'" not in grant_script
+    assert "DELETE ON ${database}.categories TO 'uslugi_admin'" not in grant_script
+    assert (
+        "GRANT SELECT ON ${database}.professional_category_rubrics "
+        "TO 'uslugi_admin'@'%';" in grant_script
+    )
+    assert (
+        "GRANT SELECT, INSERT, UPDATE ON ${database}.professional_category_rubrics "
+        "TO 'uslugi_admin'@'%';" not in grant_script
+    )
+    assert (
+        "GRANT SELECT, DELETE ON ${database}.professional_category_rubrics "
+        "TO 'uslugi_admin'@'%';" not in grant_script
+    )

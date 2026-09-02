@@ -9,6 +9,7 @@
         .catalog-group { min-width: 155px; }
         .catalog-status { min-width: 135px; }
         .catalog-parsing { min-width: 170px; }
+        .catalog-actions { min-width: 105px; }
     </style>
 @endsection
 
@@ -101,8 +102,12 @@
             </div>
 
             <div class="card">
-                <div class="card-header">
-                    Найдено строк: <strong>{{ $rows->total() }}</strong>
+                <div class="card-header d-flex flex-wrap align-items-center justify-content-between">
+                    <span>Найдено строк: <strong>{{ $rows->total() }}</strong></span>
+                    <a href="{{ route('admin.catalog.create') }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus mr-1" aria-hidden="true"></i>
+                        Добавить категорию
+                    </a>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -119,6 +124,7 @@
                                 <th scope="col">Slug / URL</th>
                                 <th scope="col">Статус</th>
                                 <th scope="col">Парсинг</th>
+                                <th scope="col">Действия</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -243,10 +249,46 @@
                                             </small>
                                         @endif
                                     </td>
+                                    <td class="catalog-actions text-nowrap">
+                                        <a
+                                            href="{{ route('admin.catalog.edit', [
+                                                'category' => $row->category_id,
+                                                'taxonomyLevel' => $row->taxonomy_level,
+                                                'catalogNode' => $row->target_catalog_id,
+                                            ]) }}"
+                                            class="btn btn-sm btn-primary"
+                                            aria-label="Редактировать {{ $row->target_catalog_id }}"
+                                        >
+                                            <i class="fas fa-edit" aria-hidden="true"></i>
+                                            <span class="sr-only">Редактировать</span>
+                                        </a>
+                                        <form
+                                            method="post"
+                                            class="d-inline"
+                                            action="{{ route('admin.catalog.destroy', [
+                                                'category' => $row->category_id,
+                                                'taxonomyLevel' => $row->taxonomy_level,
+                                                'catalogNode' => $row->target_catalog_id,
+                                            ]) }}"
+                                            onsubmit="return confirm('Удалить категорию из выбранной группы? Цель парсинга будет отключена, а справочный узел сохранится для истории.');"
+                                        >
+                                            @csrf
+                                            @method('DELETE')
+                                            <input type="hidden" name="confirmed" value="1">
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-danger"
+                                                aria-label="Удалить {{ $row->target_catalog_id }}"
+                                            >
+                                                <i class="fas fa-trash" aria-hidden="true"></i>
+                                                <span class="sr-only">Удалить</span>
+                                            </button>
+                                        </form>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center py-4">
+                                    <td colspan="8" class="text-center py-4">
                                         По заданным фильтрам записи не найдены.
                                     </td>
                                 </tr>
