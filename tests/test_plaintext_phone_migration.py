@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE_REVISION = "20260820_01"
 LEGACY_REVISION = "20260826_02"
 SETTINGS_REVISION = "20260827_05"
-HEAD_REVISION = "20260901_09"
+HEAD_REVISION = "20260902_10"
 TAXONOMY_SNAPSHOT = json.loads(
     (ROOT / "migrations/data/20260901_yandex_taxonomy.json").read_text(encoding="utf-8")
 )
@@ -273,6 +273,20 @@ def professional_category_indexes(database_url: str) -> set[str]:
         engine.dispose()
 
 
+def professional_rubric_indexes(database_url: str) -> set[str]:
+    """Вернуть индексы доказательств рубрик для связи с Каталогом Яндекса."""
+
+    engine = sa.create_engine(database_url)
+    try:
+        return {
+            str(index["name"])
+            for index in sa.inspect(engine).get_indexes("professional_category_rubrics")
+            if index.get("name")
+        }
+    finally:
+        engine.dispose()
+
+
 def test_admin_index_revision_downgrades_to_base_on_sqlite(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -398,6 +412,7 @@ def test_fresh_upgrade_creates_plaintext_schema_without_legacy_key(
         definition.key: (definition.name, definition.note or None)
         for definition in DEFAULT_CATEGORIES.values()
     }
+    assert "ix_professional_category_rubrics_catalog" in professional_rubric_indexes(database_url)
 
 
 def test_upgrade_decrypts_legacy_phone_then_drops_legacy_columns(
@@ -615,7 +630,7 @@ def test_taxonomy_upgrade_backfills_custom_parser_category(
     finally:
         engine.dispose()
 
-    command.upgrade(alembic_config(), "head")
+    command.upgrade(alembic_config(), "20260901_09")
 
     engine = sa.create_engine(database_url)
     try:
@@ -629,6 +644,209 @@ def test_taxonomy_upgrade_backfills_custom_parser_category(
         assert target == ("unknown", 999999, custom_path)
     finally:
         engine.dispose()
+
+
+def test_catalog_authority_backfills_evidence_and_disables_legacy_target(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Сохранить мастера и телефон, но не обходить цель вне Каталога Яндекса."""
+
+    database_url = sqlite_url(tmp_path / "catalog-authority.sqlite")
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    command.upgrade(alembic_config(), "20260901_09")
+    engine = sa.create_engine(database_url)
+    now = datetime(2026, 9, 2, 10, 0, 0)
+    try:
+        with engine.begin() as connection:
+            category_id = int(
+                connection.scalar(sa.text("SELECT id FROM categories WHERE `key` = 'designers'"))
+            )
+            estimators_category_id = int(
+                connection.scalar(sa.text("SELECT id FROM categories WHERE `key` = 'estimators'"))
+            )
+            connection.execute(
+                sa.text(
+                    "INSERT INTO professionals ("
+                    "id, source, source_profile_id, profile_url, profile_url_hash, full_name, "
+                    "phone, phone_status, age_as_of, content_hash, parser_version, "
+                    "first_seen_at, last_seen_at, last_scraped_at) VALUES ("
+                    "901, 'uslugi.yandex.ru', 'catalog-migration', "
+                    "'https://uslugi.yandex.ru/profile/Catalog-901', :url_hash, 'Test', "
+                    "'+79991234567', 'public_profile', '2026-09-02', :content_hash, '0.1.0', "
+                    ":now, :now, :now)"
+                ),
+                {"url_hash": "c" * 64, "content_hash": "d" * 64, "now": now},
+            )
+            connection.execute(
+                sa.text(
+                    "INSERT INTO professional_categories "
+                    "(professional_id, category_id, first_seen_at, last_seen_at) "
+                    "VALUES (901, :category_id, :now, :now)"
+                ),
+                {"category_id": category_id, "now": now},
+            )
+            connection.execute(
+                sa.text(
+                    "INSERT INTO professional_category_rubrics ("
+                    "professional_id, category_id, source_rubric_number_id, "
+                    "source_rubric_level, source_rubric_name, first_seen_at, last_seen_at) "
+                    "VALUES (901, :category_id, 217, NULL, 'Legacy designers', :now, :now)"
+                ),
+                {"category_id": category_id, "now": now},
+            )
+            connection.execute(
+                sa.text(
+                    "UPDATE parser_category_targets SET taxonomy_level = 'unknown', "
+                    "source_rubric_number_id = 999999, relative_path = 'legacy--999999' "
+                    "WHERE category_id = :category_id"
+                ),
+                {"category_id": category_id},
+            )
+            # Старый /cp/categories выключал только родителя,
+            # оставляя target активным.
+            connection.execute(
+                sa.text(
+                    "UPDATE parser_categories SET is_active = 0 WHERE category_id = :category_id"
+                ),
+                {"category_id": estimators_category_id},
+            )
+            connection.execute(
+                sa.text(
+                    "UPDATE parser_category_targets SET relative_path = 'wrong--1844' "
+                    "WHERE source_rubric_number_id = 1844"
+                )
+            )
+            connection.execute(
+                sa.text(
+                    "UPDATE yandex_specializations SET source_url = NULL "
+                    "WHERE external_number_id = 2007"
+                )
+            )
+            connection.execute(
+                sa.text(
+                    "UPDATE yandex_specializations "
+                    "SET source_url = 'https://evil.example/category/carpenter--5788' "
+                    "WHERE external_number_id = 5788"
+                )
+            )
+            connection.execute(
+                sa.text(
+                    "DELETE FROM category_yandex_specializations "
+                    "WHERE specialization_id = ("
+                    "SELECT id FROM yandex_specializations WHERE external_number_id = 1708)"
+                )
+            )
+            connection.execute(
+                sa.text(
+                    "UPDATE yandex_specializations SET source_url = "
+                    "'https://uslugi.yandex.ru/category/"
+                    "remont-i-stroitelstvo/slabotochnye-sistemy--5784' "
+                    "WHERE external_number_id = 5784"
+                )
+            )
+    finally:
+        engine.dispose()
+
+    command.upgrade(alembic_config(), "head")
+
+    engine = sa.create_engine(database_url)
+    try:
+        with engine.connect() as connection:
+            assert (
+                connection.scalar(sa.text("SELECT phone FROM professionals WHERE id = 901"))
+                == "+79991234567"
+            )
+            assert (
+                connection.scalar(
+                    sa.text(
+                        "SELECT source_rubric_level FROM professional_category_rubrics "
+                        "WHERE professional_id = 901"
+                    )
+                )
+                == "occupation"
+            )
+            assert (
+                connection.scalar(
+                    sa.text(
+                        "SELECT is_active FROM parser_category_targets "
+                        "WHERE source_rubric_number_id = 999999"
+                    )
+                )
+                == 0
+            )
+            assert (
+                connection.scalar(
+                    sa.text(
+                        "SELECT is_active FROM parser_categories WHERE category_id = "
+                        "(SELECT id FROM categories WHERE `key` = 'designers')"
+                    )
+                )
+                == 0
+            )
+            assert (
+                connection.scalar(
+                    sa.text(
+                        "SELECT COUNT(*) FROM parser_category_targets "
+                        "WHERE category_id = :category_id AND is_active = 1"
+                    ),
+                    {"category_id": estimators_category_id},
+                )
+                == 0
+            )
+            invalid_catalog_targets = int(
+                connection.scalar(
+                    sa.text(
+                        "SELECT COUNT(*) FROM parser_category_targets "
+                        "WHERE source_rubric_number_id IN (1844, 2007, 5788, 1708) "
+                        "AND is_active = 0"
+                    )
+                )
+                or 0
+            )
+            assert invalid_catalog_targets == 4
+            assert (
+                connection.scalar(
+                    sa.text(
+                        "SELECT is_active FROM parser_category_targets "
+                        "WHERE source_rubric_number_id = 5784"
+                    )
+                )
+                == 1
+            )
+            designers_seed_paths = connection.scalar(
+                sa.text(
+                    "SELECT seed_paths FROM parser_categories WHERE category_id = :category_id"
+                ),
+                {"category_id": category_id},
+            )
+            estimators_seed_paths = connection.scalar(
+                sa.text(
+                    "SELECT seed_paths FROM parser_categories WHERE category_id = :category_id"
+                ),
+                {"category_id": estimators_category_id},
+            )
+            plumbers_seed_paths = connection.scalar(
+                sa.text(
+                    "SELECT seed_paths FROM parser_categories WHERE category_id = "
+                    "(SELECT id FROM categories WHERE `key` = 'plumbers')"
+                )
+            )
+            assert json.loads(str(designers_seed_paths)) == []
+            assert json.loads(str(estimators_seed_paths)) == []
+            assert json.loads(str(plumbers_seed_paths)) == [
+                "remont-i-stroitelstvo/vodosnabzhenie-i-kanalizatsiya--1367"
+            ]
+        assert "ix_professional_category_rubrics_catalog" in professional_rubric_indexes(
+            database_url
+        )
+    finally:
+        engine.dispose()
+
+    command.downgrade(alembic_config(), "20260901_09")
+    assert "ix_professional_category_rubrics_catalog" not in professional_rubric_indexes(
+        database_url
+    )
 
 
 def test_upgrade_fails_before_ddl_when_legacy_key_is_missing(

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Any
+from urllib.parse import urlsplit
 
 from sqlalchemy import and_, select
 from sqlalchemy.orm import Session, sessionmaker
@@ -12,11 +14,15 @@ from uslugi_parser.catalog import (
     CategoryDefinition,
     validate_category_definitions,
     validate_category_key,
+    validate_geo_slug,
     validate_seed_path,
 )
 from uslugi_parser.exceptions import ConfigurationError
 from uslugi_parser.infrastructure.database.models import (
     Category,
+    CategoryYandexOccupation,
+    CategoryYandexService,
+    CategoryYandexSpecialization,
     ParserCategory,
     ParserCategoryTarget,
     YandexOccupation,
@@ -25,6 +31,8 @@ from uslugi_parser.infrastructure.database.models import (
 )
 
 CrawlTarget = tuple[str, int, str]
+CatalogNode = tuple[str | None, str | None, str]
+_USABLE_VERIFICATION_STATUSES = frozenset({"confirmed", "discovered", "legacy"})
 
 
 class ParserCategoryRepository:
@@ -98,6 +106,7 @@ class ParserCategoryRepository:
                 ParserCategoryTarget.relative_path,
                 ParserCategoryTarget.source_rubric_number_id,
                 ParserCategoryTarget.taxonomy_level,
+                ParserCategory.category_id,
             )
             .join(ParserCategory, ParserCategory.category_id == Category.id)
             .outerjoin(
@@ -119,27 +128,24 @@ class ParserCategoryRepository:
 
         with self.session_factory() as session:
             rows = session.execute(statement).all()
-            known_ids = {
-                "occupation": set(
-                    session.scalars(
-                        select(YandexOccupation.external_number_id).where(
-                            YandexOccupation.external_number_id.is_not(None)
-                        )
-                    )
+            catalog_nodes = {
+                "occupation": self._catalog_nodes(
+                    session,
+                    YandexOccupation,
+                    CategoryYandexOccupation,
+                    "occupation_id",
                 ),
-                "specialization": set(
-                    session.scalars(
-                        select(YandexSpecialization.external_number_id).where(
-                            YandexSpecialization.external_number_id.is_not(None)
-                        )
-                    )
+                "specialization": self._catalog_nodes(
+                    session,
+                    YandexSpecialization,
+                    CategoryYandexSpecialization,
+                    "specialization_id",
                 ),
-                "service": set(
-                    session.scalars(
-                        select(YandexService.external_number_id).where(
-                            YandexService.external_number_id.is_not(None)
-                        )
-                    )
+                "service": self._catalog_nodes(
+                    session,
+                    YandexService,
+                    CategoryYandexService,
+                    "service_id",
                 ),
             }
 
@@ -162,12 +168,107 @@ class ParserCategoryRepository:
                         f"Parser category {key!r} crawl target ID {rubric_id} "
                         f"does not match path ID {path_rubric_id}"
                     )
-                if level != "unknown" and rubric_id not in known_ids.get(level, set()):
+                if level not in catalog_nodes:
                     raise ConfigurationError(
-                        f"Parser category {key!r} references unknown {level} ID {rubric_id}"
+                        f"Parser category {key!r} has a target outside Yandex catalog"
                     )
-                grouped[key][4].append((row.relative_path, rubric_id, level))
+                node = catalog_nodes[level].get((int(row.category_id), rubric_id))
+                if node is None:
+                    raise ConfigurationError(
+                        f"Parser category {key!r} references an unmapped "
+                        f"Yandex catalog {level} ID {rubric_id}"
+                    )
+                catalog_slug, source_url, verification_status = node
+                if verification_status not in _USABLE_VERIFICATION_STATUSES:
+                    raise ConfigurationError(
+                        f"Parser category {key!r} references unverified {level} ID {rubric_id}"
+                    )
+                try:
+                    catalog_path = self._catalog_path(catalog_slug, source_url, rubric_id)
+                except (TypeError, ValueError) as exc:
+                    raise ConfigurationError(
+                        f"Parser category {key!r} has an invalid {level} catalog slug: {exc}"
+                    ) from exc
+                if row.relative_path != catalog_path:
+                    raise ConfigurationError(
+                        f"Parser category {key!r} crawl target path does not match "
+                        f"Yandex catalog {level} ID {rubric_id}"
+                    )
+                grouped[key][4].append((catalog_path, rubric_id, level))
         return list(grouped.values())
+
+    @staticmethod
+    def _catalog_nodes(
+        session: Session,
+        model: type[Any],
+        mapping_model: type[Any],
+        mapping_foreign_key: str,
+    ) -> dict[tuple[int, int], CatalogNode]:
+        """Загрузить узлы уровня вместе с их точной внутренней группой."""
+
+        mapping_column = getattr(mapping_model, mapping_foreign_key)
+        rows = session.execute(
+            select(
+                mapping_model.category_id,
+                model.external_number_id,
+                model.slug,
+                model.source_url,
+                model.verification_status,
+            )
+            .join(model, model.id == mapping_column)
+            .where(model.external_number_id.is_not(None))
+        )
+        return {
+            (int(row.category_id), int(row.external_number_id)): (
+                None if row.slug is None else str(row.slug),
+                None if row.source_url is None else str(row.source_url),
+                str(row.verification_status),
+            )
+            for row in rows
+        }
+
+    @staticmethod
+    def _catalog_path(slug: str | None, source_url: str | None, rubric_id: int) -> str:
+        """Построить seed path из канонического URL и проверить его по slug."""
+
+        if (
+            not isinstance(slug, str)
+            or not slug
+            or slug != slug.strip()
+            or not slug.startswith("/")
+            or slug.endswith("/")
+        ):
+            raise ValueError("catalog slug is missing")
+        slug_path = f"{slug[1:]}--{rubric_id}"
+        if validate_seed_path(slug_path) != rubric_id:
+            raise ValueError("catalog slug contains a different rubric ID")
+
+        if not isinstance(source_url, str) or not source_url or source_url != source_url.strip():
+            raise ValueError("catalog source_url is missing")
+        parsed = urlsplit(source_url)
+        if (
+            parsed.scheme != "https"
+            or parsed.netloc != "uslugi.yandex.ru"
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError("catalog source_url is not canonical")
+        path_parts = parsed.path.split("/")
+        if len(path_parts) >= 3 and not path_parts[0] and path_parts[1] == "category":
+            source_path = "/".join(path_parts[2:])
+        elif len(path_parts) >= 4 and not path_parts[0] and path_parts[2] == "category":
+            try:
+                validate_geo_slug(path_parts[1])
+            except (TypeError, ValueError) as exc:
+                raise ValueError("catalog source_url is not canonical") from exc
+            source_path = "/".join(path_parts[3:])
+        else:
+            raise ValueError("catalog source_url is not canonical")
+        if validate_seed_path(source_path) != rubric_id:
+            raise ValueError("catalog source_url contains a different rubric ID")
+        if source_path != slug_path:
+            raise ValueError("catalog source_url and slug do not match")
+        return source_path
 
     @staticmethod
     def _definition_from_row(
@@ -203,6 +304,7 @@ class ParserCategoryRepository:
                 name=name,
                 seed_paths=tuple(target[0] for target in targets),
                 note=note or "",
+                taxonomy_levels=tuple(target[2] for target in targets),
             )
         except (TypeError, ValueError) as exc:
             raise ConfigurationError(f"Invalid parser category {key!r}: {exc}") from exc

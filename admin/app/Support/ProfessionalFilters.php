@@ -2,6 +2,10 @@
 
 namespace App\Support;
 
+use App\Models\ParserCategoryTarget;
+use App\Models\YandexOccupation;
+use App\Models\YandexService;
+use App\Models\YandexSpecialization;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
@@ -67,12 +71,42 @@ final class ProfessionalFilters
             );
         }
 
-        if ($request->filled('category_id')) {
-            $categoryId = (int) $request->input('category_id');
-            $query->whereHas(
-                'categories',
-                fn (Builder $categoryQuery) => $categoryQuery->whereKey($categoryId),
-            );
+        if ($request->filled('catalog_target')) {
+            $target = trim((string) $request->input('catalog_target'));
+            if (preg_match(
+                '/\A(occupation|specialization|service):([1-9][0-9]*)\z/D',
+                $target,
+                $matches,
+            ) !== 1) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $level = $matches[1];
+                $rubricId = (int) $matches[2];
+                $modelClass = match ($level) {
+                    ParserCategoryTarget::LEVEL_OCCUPATION => YandexOccupation::class,
+                    ParserCategoryTarget::LEVEL_SPECIALIZATION => YandexSpecialization::class,
+                    ParserCategoryTarget::LEVEL_SERVICE => YandexService::class,
+                };
+                $isCatalogTarget = ParserCategoryTarget::query()
+                    ->where('taxonomy_level', $level)
+                    ->where('source_rubric_number_id', $rubricId)
+                    ->exists()
+                    && $modelClass::query()
+                        ->where('external_number_id', $rubricId)
+                        ->exists();
+
+                if (! $isCatalogTarget) {
+                    $query->whereRaw('1 = 0');
+
+                    return;
+                }
+
+                $query->whereHas('rubrics', function (Builder $rubricQuery) use ($level, $rubricId): void {
+                    $rubricQuery
+                        ->where('source_rubric_number_id', $rubricId)
+                        ->where('source_rubric_level', $level);
+                });
+            }
         }
 
         if ($request->filled('scraped_from')) {

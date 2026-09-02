@@ -169,7 +169,13 @@ def test_runtime_roles_separate_parser_category_read_and_admin_write() -> None:
 
     assert "GRANT SELECT ON ${database}.parser_categories TO 'uslugi_parser'@'%';" in grant_script
     assert (
-        "GRANT SELECT, INSERT, UPDATE, DELETE ON ${database}.parser_categories "
+        "GRANT SELECT, INSERT, UPDATE ON ${database}.parser_categories "
         "TO 'uslugi_admin'@'%';" in grant_script
     )
+    assert (
+        "GRANT SELECT, INSERT, UPDATE ON ${database}.parser_category_targets "
+        "TO 'uslugi_admin'@'%';" in grant_script
+    )
+    assert "DELETE ON ${database}.parser_categories" not in grant_script
+    assert "DELETE ON ${database}.parser_category_targets" not in grant_script
     assert "INSERT, UPDATE ON ${database}.parser_categories TO 'uslugi_parser'" not in grant_script

@@ -5,8 +5,8 @@ from copy import deepcopy
 import pytest
 from conftest import html_with_state, make_state, make_worker
 
-from uslugi_parser.application import crawl
-from uslugi_parser.catalog.categories import DEFAULT_CATEGORIES
+from uslugi_parser.application import crawl, parse_live_profile
+from uslugi_parser.catalog.categories import DEFAULT_CATEGORIES, CategoryDefinition
 from uslugi_parser.config import Settings
 from uslugi_parser.exceptions import CaptchaDetected, CrawlAborted
 from uslugi_parser.infrastructure.http.fetcher import FetchResult
@@ -61,7 +61,6 @@ async def test_category_captcha_aborts_entire_crawl() -> None:
             categories=[DEFAULT_CATEGORIES["plumbers"]],
             max_pages=1,
             max_profiles=1,
-            collect_phone=False,
             repository=None,
             fetcher_factory=lambda _settings: fake,
         )
@@ -83,7 +82,6 @@ async def test_profile_captcha_aborts_entire_crawl() -> None:
             categories=[DEFAULT_CATEGORIES["plumbers"]],
             max_pages=1,
             max_profiles=1,
-            collect_phone=False,
             repository=None,
             fetcher_factory=lambda _settings: fake,
         )
@@ -105,7 +103,6 @@ async def test_unknown_account_type_is_skipped() -> None:
         categories=[DEFAULT_CATEGORIES["electricians"]],
         max_pages=1,
         max_profiles=1,
-        collect_phone=False,
         repository=None,
         fetcher_factory=lambda _settings: fake,
     )
@@ -128,9 +125,39 @@ class CaptchaPhoneCollector:
 
 
 @pytest.mark.asyncio
-async def test_phone_captcha_aborts_entire_crawl() -> None:
+async def test_direct_profile_phone_captcha_keeps_existing_flow() -> None:
+    """Оставить UI-раскрытие телефона только в сценарии одиночного профиля."""
+
     worker = deepcopy(make_worker())
     worker["personalInfo"]["socialLinks"] = {"messengers": {}}
+    fake = FakeFetcher(
+        result(
+            html_with_state(make_state(worker)),
+            "https://uslugi.yandex.ru/profile/TestMaster-123456",
+        ),
+    )
+    profile = await parse_live_profile(
+        "https://uslugi.yandex.ru/profile/TestMaster-123456",
+        live_settings(),
+        collect_phone=True,
+        fetcher_factory=lambda _settings: fake,
+        phone_collector_factory=lambda _settings: CaptchaPhoneCollector(),
+    )
+    assert profile.phone is None
+    assert profile.phone_status == "blocked_captcha"
+
+
+@pytest.mark.asyncio
+async def test_catalog_crawl_never_extracts_public_phone() -> None:
+    """Не читать номер из state профиля при массовом обходе Каталога Яндекса."""
+
+    worker = make_worker()
+    one_target_category = CategoryDefinition(
+        key="plumbers_test",
+        name="Тестовая сантехника",
+        seed_paths=("remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie--1844",),
+        taxonomy_levels=("specialization",),
+    )
     fake = FakeFetcher(
         result(html_with_state(make_state(worker)), "https://uslugi.yandex.ru/category"),
         result(
@@ -138,14 +165,14 @@ async def test_phone_captcha_aborts_entire_crawl() -> None:
             "https://uslugi.yandex.ru/profile/TestMaster-123456",
         ),
     )
-    with pytest.raises(CrawlAborted, match="CAPTCHA"):
-        await crawl(
-            settings=live_settings(),
-            categories=[DEFAULT_CATEGORIES["plumbers"]],
-            max_pages=1,
-            max_profiles=1,
-            collect_phone=True,
-            repository=None,
-            fetcher_factory=lambda _settings: fake,
-            phone_collector_factory=lambda _settings: CaptchaPhoneCollector(),
-        )
+    stats = await crawl(
+        settings=live_settings(),
+        categories=[one_target_category],
+        max_pages=1,
+        max_profiles=1,
+        repository=None,
+        fetcher_factory=lambda _settings: fake,
+    )
+    assert len(stats.profiles) == 1
+    assert stats.profiles[0]["phone"] is None
+    assert stats.profiles[0]["phone_status"] == "not_requested"

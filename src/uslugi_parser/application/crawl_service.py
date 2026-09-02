@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import logging
-from contextlib import AsyncExitStack
 
 from uslugi_parser.application.dto import (
     CrawlOptions,
     FetcherFactory,
-    PhoneCollectorFactory,
-    PhoneCollectorPort,
     ProfessionalWriter,
 )
 from uslugi_parser.catalog.categories import CategoryDefinition
@@ -19,11 +16,9 @@ from uslugi_parser.exceptions import (
     BlockedRedirect,
     BlockingFetchError,
     CaptchaDetected,
-    ConfigurationError,
     CrawlAborted,
     FetchError,
     ParseError,
-    PhoneNavigationBlocked,
     RobotsDenied,
     RobotsUnavailable,
     ServerAskedToStop,
@@ -47,46 +42,35 @@ async def crawl(
     categories: list[CategoryDefinition],
     max_pages: int,
     max_profiles: int,
-    collect_phone: bool,
     repository: ProfessionalWriter | None,
     fetcher_factory: FetcherFactory,
-    phone_collector_factory: PhoneCollectorFactory | None = None,
 ) -> CrawlStats:
     """Обойти выбранные категории и вернуть статистику запуска.
 
     Сценарий координирует загрузку и разбор страниц, дедупликацию профилей,
-    проверку рубрик, опциональное получение телефона и сохранение через порт
-    репозитория. Блокирующие ответы, CAPTCHA и опасная навигация прекращают обход
+    проверку рубрик и сохранение через порт репозитория. Телефоны в массовом
+    обходе не извлекаются и не раскрываются. Блокирующие ответы и CAPTCHA прекращают обход
     целиком, а запрет отдельного URL в robots.txt безопасно пропускает только его.
     """
 
     options = CrawlOptions(
         max_pages=max_pages,
         max_profiles=max_profiles,
-        collect_phone=collect_phone,
     )
-    if options.collect_phone:
-        settings.require_phone_reveal_policy()
-        if phone_collector_factory is None:
-            raise ConfigurationError("phone collector is not configured")
 
     stats = CrawlStats()
     profile_cache: dict[str, ParsedProfessional | None] = {}
     unique_fetched = 0
     limit_reached = False
-    phone_collection_enabled = options.collect_phone
-
-    async with AsyncExitStack() as stack:
-        fetcher = await stack.enter_async_context(fetcher_factory(settings))
-        phone_collector: PhoneCollectorPort | None = None
-        if options.collect_phone:
-            assert phone_collector_factory is not None
-            phone_collector = await stack.enter_async_context(phone_collector_factory(settings))
-
+    async with fetcher_factory(settings) as fetcher:
         for category in categories:
             if limit_reached:
                 break
-            for seed_url in category.urls(settings.geo):
+            for (_seed_path, expected_level), seed_url in zip(
+                category.targets(),
+                category.urls(settings.geo),
+                strict=True,
+            ):
                 target_rubric_number_id = seed_number_id(seed_url)
                 page_number = 0
                 seen_in_seed: set[str] = set()
@@ -179,7 +163,12 @@ async def crawl(
                                 profile = parse_profile_html(
                                     profile_result.text,
                                     profile_result.url,
+                                    include_phone=False,
                                 )
+                                # Защита в глубину: даже если парсер профиля будет
+                                # изменён, bulk-crawl не передаст номер в хранилище.
+                                profile.phone = None
+                                profile.phone_status = "not_requested"
                                 stats.parsed += 1
                             except (
                                 BlockedRedirect,
@@ -232,41 +221,15 @@ async def crawl(
                                 stats.skipped_organizations += 1
                                 profile = None
 
-                            if profile and profile.phone:
-                                stats.phone_collected += 1
-                            elif profile and phone_collection_enabled and phone_collector:
-                                try:
-                                    phone = await phone_collector.collect(
-                                        profile.profile_url,
-                                        profile.country,
-                                    )
-                                    profile.phone = phone
-                                    profile.phone_status = (
-                                        "revealed_ui" if phone else "reveal_failed"
-                                    )
-                                    if phone:
-                                        stats.phone_collected += 1
-                                    else:
-                                        stats.phone_unavailable += 1
-                                except CaptchaDetected as exc:
-                                    profile.phone_status = "blocked_captcha"
-                                    stats.phone_unavailable += 1
-                                    raise CrawlAborted(
-                                        "Yandex returned a CAPTCHA during phone reveal; "
-                                        "crawl stopped"
-                                    ) from exc
-                                except PhoneNavigationBlocked as exc:
-                                    profile.phone_status = "blocked_navigation"
-                                    raise CrawlAborted(
-                                        "Phone navigation left the allowed profile scope; "
-                                        "crawl stopped"
-                                    ) from exc
-
                             profile_cache[discovered.profile_url] = profile
 
                         if profile is None:
                             continue
-                        evidence = match_rubric(profile, target_rubric_number_id)
+                        evidence = match_rubric(
+                            profile,
+                            target_rubric_number_id,
+                            expected_level,
+                        )
                         if evidence is None:
                             stats.skipped_category_mismatch += 1
                             continue

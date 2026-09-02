@@ -8,6 +8,7 @@
         .catalog-node code, .catalog-slug { overflow-wrap: anywhere; white-space: normal; }
         .catalog-group { min-width: 155px; }
         .catalog-status { min-width: 135px; }
+        .catalog-parsing { min-width: 170px; }
     </style>
 @endsection
 
@@ -16,9 +17,10 @@
         <div class="container-fluid">
             <div class="alert alert-info">
                 <i class="fas fa-info-circle mr-1" aria-hidden="true"></i>
-                Read-only справочник построен по данным Яндекс Услуг. Строки направлений,
-                специализаций и услуг показаны отдельно; отметка «В парсинге» означает,
-                что активная цель входит в текущий план обхода.
+                Яндекс.Каталог является единственным источником категорий для массового парсинга
+                Яндекс Услуг. Включить можно только проверенную строку с согласованными
+                slug, числовым ID и канонической ссылкой на uslugi.yandex.ru. Телефоны
+                при массовом обходе каталога не извлекаются.
             </div>
 
             <div class="card card-outline card-info">
@@ -202,14 +204,43 @@
                                             @endswitch
                                         </small>
                                     </td>
-                                    <td class="text-nowrap">
+                                    <td class="catalog-parsing">
                                         @if ($row->used_for_parsing)
-                                            <span class="badge badge-success">
+                                            <span class="badge badge-success mb-2">
                                                 <i class="fas fa-check mr-1" aria-hidden="true"></i>
                                                 В парсинге
                                             </span>
                                         @else
-                                            <span class="badge badge-light border">Не участвует</span>
+                                            <span class="badge badge-light border mb-2">Не участвует</span>
+                                        @endif
+
+                                        @if ($row->can_toggle_parsing)
+                                            <form
+                                                method="post"
+                                                action="{{ route('admin.catalog.parsing', [
+                                                    'category' => $row->category_id,
+                                                    'taxonomyLevel' => $row->taxonomy_level,
+                                                    'catalogNode' => $row->target_catalog_id,
+                                                ]) }}"
+                                            >
+                                                @csrf
+                                                @method('PATCH')
+                                                <input
+                                                    type="hidden"
+                                                    name="is_active"
+                                                    value="{{ $row->used_for_parsing ? '0' : '1' }}"
+                                                >
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-sm {{ $row->used_for_parsing ? 'btn-outline-danger' : 'btn-outline-success' }}"
+                                                >
+                                                    {{ $row->used_for_parsing ? 'Исключить' : 'Включить' }}
+                                                </button>
+                                            </form>
+                                        @else
+                                            <small class="d-block text-muted">
+                                                Недоступно: статус, slug, URL или ID не подтверждены
+                                            </small>
                                         @endif
                                     </td>
                                 </tr>

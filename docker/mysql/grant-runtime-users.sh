@@ -80,9 +80,9 @@ GRANT SELECT ON ${database}.alembic_version TO 'uslugi_parser'@'%';
 
 GRANT SELECT, DELETE ON ${database}.professionals TO 'uslugi_admin'@'%';
 GRANT SELECT ON ${database}.professional_identities TO 'uslugi_admin'@'%';
-GRANT SELECT, INSERT, UPDATE ON ${database}.categories TO 'uslugi_admin'@'%';
-GRANT SELECT, INSERT, UPDATE, DELETE ON ${database}.parser_categories TO 'uslugi_admin'@'%';
-GRANT SELECT, INSERT, UPDATE, DELETE ON ${database}.parser_category_targets TO 'uslugi_admin'@'%';
+GRANT SELECT ON ${database}.categories TO 'uslugi_admin'@'%';
+GRANT SELECT, INSERT, UPDATE ON ${database}.parser_categories TO 'uslugi_admin'@'%';
+GRANT SELECT, INSERT, UPDATE ON ${database}.parser_category_targets TO 'uslugi_admin'@'%';
 GRANT SELECT ON ${database}.yandex_occupations TO 'uslugi_admin'@'%';
 GRANT SELECT ON ${database}.yandex_specializations TO 'uslugi_admin'@'%';
 GRANT SELECT ON ${database}.yandex_services TO 'uslugi_admin'@'%';

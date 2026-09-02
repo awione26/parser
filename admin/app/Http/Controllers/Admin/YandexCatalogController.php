@@ -3,18 +3,54 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Requests\Admin\YandexCatalog\IndexRequest;
+use App\Http\Requests\Admin\YandexCatalog\UpdateParsingRequest;
 use App\Models\Category;
+use App\Models\ParserCategory;
+use App\Models\ParserCategoryTarget;
+use App\Models\YandexOccupation;
+use App\Models\YandexService;
+use App\Models\YandexSpecialization;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\JoinClause;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
- * Показывает нормализованную таксономию Яндекс Услуг без возможности изменения.
+ * Показывает таксономию Яндекс Услуг и управляет только выбором целей обхода.
  */
 final class YandexCatalogController extends Controller
 {
+    /** @var list<string> */
+    private const array USABLE_VERIFICATION_STATUSES = [
+        'confirmed',
+        'discovered',
+        'legacy',
+    ];
+
+    /** @var array<string, array{model: class-string<Model>, mapping: string, foreign_key: string}> */
+    private const array TAXONOMY_LEVELS = [
+        ParserCategoryTarget::LEVEL_OCCUPATION => [
+            'model' => YandexOccupation::class,
+            'mapping' => 'category_yandex_occupations',
+            'foreign_key' => 'occupation_id',
+        ],
+        ParserCategoryTarget::LEVEL_SPECIALIZATION => [
+            'model' => YandexSpecialization::class,
+            'mapping' => 'category_yandex_specializations',
+            'foreign_key' => 'specialization_id',
+        ],
+        ParserCategoryTarget::LEVEL_SERVICE => [
+            'model' => YandexService::class,
+            'mapping' => 'category_yandex_services',
+            'foreign_key' => 'service_id',
+        ],
+    ];
+
     /** @var array<string, string> */
     private const array STATUS_LABELS = [
         'confirmed' => 'Подтверждено',
@@ -70,17 +106,202 @@ final class YandexCatalogController extends Controller
             $row->status_badge = self::STATUS_BADGES[$status] ?? 'secondary';
             $row->safe_source_url = $this->safeSourceUrl($row->target_source_url);
             $row->used_for_parsing = (bool) $row->used_for_parsing;
+            $urlPath = $this->crawlPath(
+                $row->safe_source_url,
+                $row->target_external_number_id,
+            );
+            $catalogPath = $this->catalogPath(
+                $row->target_slug,
+                $row->target_external_number_id,
+            );
+            $row->can_toggle_parsing = $urlPath !== null
+                && $catalogPath !== null
+                && hash_equals($catalogPath, $urlPath)
+                && in_array(
+                    $row->target_verification_status,
+                    self::USABLE_VERIFICATION_STATUSES,
+                    true,
+                );
 
             return $row;
         });
 
         return view('admin.catalog.index', [
-            'title' => 'Каталог Яндекса',
+            'title' => 'Яндекс.Каталог',
             'rows' => $rows,
             'groups' => $this->catalogGroups(),
             'filters' => $filters,
             'statusOptions' => self::STATUS_LABELS,
         ]);
+    }
+
+    /**
+     * Атомарно включить или выключить связанную строку каталога в плане обхода.
+     */
+    public function updateParsing(
+        UpdateParsingRequest $request,
+        Category $category,
+        string $taxonomyLevel,
+        int $catalogNode,
+    ): RedirectResponse {
+        $node = $this->linkedCatalogNode($category, $taxonomyLevel, $catalogNode);
+        $urlPath = $this->crawlPath(
+            $this->safeSourceUrl($node->getAttribute('source_url')),
+            $node->getAttribute('external_number_id'),
+        );
+        $relativePath = $this->catalogPath(
+            $node->getAttribute('slug'),
+            $node->getAttribute('external_number_id'),
+        );
+
+        if (
+            $urlPath === null
+            || $relativePath === null
+            || ! hash_equals($relativePath, $urlPath)
+            || ! in_array(
+                $node->getAttribute('verification_status'),
+                self::USABLE_VERIFICATION_STATUSES,
+                true,
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'catalog' => 'Эту строку нельзя использовать для парсинга: нужны проверенный статус, канонический URL, slug и числовой ID Яндекс.Каталога.',
+            ]);
+        }
+
+        $isActive = $request->boolean('is_active');
+        $rubricId = (int) $node->getAttribute('external_number_id');
+        $now = CarbonImmutable::now('UTC');
+
+        DB::connection($this->connectionName())->transaction(function () use (
+            $category,
+            $taxonomyLevel,
+            $relativePath,
+            $rubricId,
+            $isActive,
+            $now,
+        ): void {
+            // Блокировка всех конфигураций сериализует проверку глобальной
+            // уникальности rubric ID даже при одновременных запросах.
+            ParserCategory::query()
+                ->orderBy('category_id')
+                ->lockForUpdate()
+                ->get(['category_id']);
+
+            $configuration = ParserCategory::query()
+                ->lockForUpdate()
+                ->find($category->id);
+
+            if ($configuration === null && ! $isActive) {
+                return;
+            }
+
+            if ($configuration === null) {
+                $configuration = new ParserCategory;
+                $configuration->forceFill([
+                    'category_id' => $category->id,
+                    'seed_paths' => [],
+                    'is_active' => false,
+                    'sort_order' => min(
+                        2147483647,
+                        ((int) ParserCategory::query()->max('sort_order')) + 10,
+                    ),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ])->save();
+            }
+
+            // Старый раздел мог выключить конфигурацию, оставив дочерние цели
+            // активными. При повторном включении начинаем с выбранной строки,
+            // чтобы одно действие в каталоге не включило скрыто весь набор.
+            if ($isActive && ! $configuration->is_active) {
+                ParserCategoryTarget::query()
+                    ->where('category_id', $category->id)
+                    ->where('is_active', true)
+                    ->update([
+                        'is_active' => false,
+                        'updated_at' => $now,
+                    ]);
+            }
+
+            if ($isActive) {
+                $duplicate = ParserCategoryTarget::query()
+                    ->where('source_rubric_number_id', $rubricId)
+                    ->where('category_id', '<>', $category->id)
+                    ->where('is_active', true)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($duplicate !== null) {
+                    throw ValidationException::withMessages([
+                        'catalog' => "ID рубрики {$rubricId} уже включён в другую группу мастеров.",
+                    ]);
+                }
+            }
+
+            $target = ParserCategoryTarget::query()
+                ->where('category_id', $category->id)
+                ->where('source_rubric_number_id', $rubricId)
+                ->lockForUpdate()
+                ->first();
+
+            if ($target === null && ! $isActive) {
+                return;
+            }
+
+            if (
+                $target !== null
+                && $target->is_active
+                && $target->taxonomy_level !== $taxonomyLevel
+                && $isActive
+            ) {
+                throw ValidationException::withMessages([
+                    'catalog' => "ID рубрики {$rubricId} уже включён на другом уровне Яндекс.Каталога.",
+                ]);
+            }
+
+            if ($target === null) {
+                $target = new ParserCategoryTarget;
+                $target->forceFill([
+                    'category_id' => $category->id,
+                    'source_rubric_number_id' => $rubricId,
+                    'sort_order' => min(
+                        2147483647,
+                        ((int) ParserCategoryTarget::query()
+                            ->where('category_id', $category->id)
+                            ->max('sort_order')) + 10,
+                    ),
+                    'created_at' => $now,
+                ]);
+            }
+
+            $target->forceFill([
+                'taxonomy_level' => $taxonomyLevel,
+                'relative_path' => $relativePath,
+                'is_active' => $isActive,
+                'updated_at' => $now,
+            ])->save();
+
+            $activePaths = ParserCategoryTarget::query()
+                ->where('category_id', $category->id)
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->pluck('relative_path')
+                ->all();
+
+            $configuration->forceFill([
+                'seed_paths' => $activePaths,
+                'is_active' => $activePaths !== [],
+                'updated_at' => $now,
+            ])->save();
+        });
+
+        return redirect()
+            ->back()
+            ->with('success', $isActive
+                ? 'Категория Яндекс.Каталога включена в парсинг.'
+                : 'Категория Яндекс.Каталога исключена из парсинга.');
     }
 
     /**
@@ -201,6 +422,7 @@ final class YandexCatalogController extends Controller
             {$occupation},
             {$specialization},
             {$service},
+            {$target}.id AS target_catalog_id,
             {$target}.external_id_raw AS target_external_id_raw,
             {$target}.external_number_id AS target_external_number_id,
             {$target}.slug AS target_slug,
@@ -335,6 +557,86 @@ final class YandexCatalogController extends Controller
         }
 
         return $value;
+    }
+
+    /**
+     * Получить узел требуемого уровня и проверить его связь с группой мастеров.
+     */
+    private function linkedCatalogNode(
+        Category $category,
+        string $taxonomyLevel,
+        int $catalogNode,
+    ): Model {
+        $definition = self::TAXONOMY_LEVELS[$taxonomyLevel] ?? null;
+        abort_if($definition === null, 404);
+
+        $modelClass = $definition['model'];
+        $node = $modelClass::query()->findOrFail($catalogNode);
+        $isLinked = DB::connection($this->connectionName())
+            ->table($definition['mapping'])
+            ->where('category_id', $category->id)
+            ->where($definition['foreign_key'], $catalogNode)
+            ->exists();
+        abort_unless($isLinked, 404);
+
+        return $node;
+    }
+
+    /**
+     * Преобразовать канонический URL каталога в безопасный относительный путь обхода.
+     */
+    private function crawlPath(?string $url, mixed $rubricId): ?string
+    {
+        if ($url === null || ! is_int($rubricId) || $rubricId <= 0) {
+            return null;
+        }
+
+        $absolutePath = (string) parse_url($url, PHP_URL_PATH);
+        $seedPattern = '(?:[a-z0-9]+(?:-[a-z0-9]+)*\/)*'
+            .'[a-z0-9]+(?:-[a-z0-9]+)*--'.preg_quote((string) $rubricId, '/');
+        if (preg_match(
+            '/\A\/(?:[0-9]+-[a-z0-9]+(?:-[a-z0-9]+)*\/)?category\/(?<seed>'.$seedPattern.')\z/D',
+            $absolutePath,
+            $matches,
+        ) !== 1) {
+            return null;
+        }
+
+        return $matches['seed'];
+    }
+
+    /**
+     * Построить путь парсера из slug каталога и проверить его числовой ID.
+     */
+    private function catalogPath(mixed $slug, mixed $rubricId): ?string
+    {
+        if (
+            ! is_string($slug)
+            || $slug === ''
+            || $slug !== trim($slug)
+            || ! str_starts_with($slug, '/')
+            || str_ends_with($slug, '/')
+            || ! is_int($rubricId)
+            || $rubricId <= 0
+        ) {
+            return null;
+        }
+
+        $path = substr($slug, 1);
+        $suffix = "--{$rubricId}";
+        if (str_ends_with($path, $suffix)) {
+            return null;
+        }
+        $path .= $suffix;
+
+        if (preg_match(
+            '/\A(?:[a-z0-9]+(?:-[a-z0-9]+)*\/)*[a-z0-9]+(?:-[a-z0-9]+)*'.preg_quote($suffix, '/').'\z/D',
+            $path,
+        ) !== 1) {
+            return null;
+        }
+
+        return $path;
     }
 
     /**

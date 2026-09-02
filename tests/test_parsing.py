@@ -46,6 +46,19 @@ def test_parse_profile_from_preloaded_state(profile_html: str) -> None:
     assert "dob" not in profile.public_dict()
 
 
+def test_parse_profile_can_skip_phone_extraction(profile_html: str) -> None:
+    """Не читать даже публичный номер в режиме массового обхода каталога."""
+
+    profile = parse_profile_html(
+        profile_html,
+        "https://uslugi.yandex.ru/profile/TestMaster-123456",
+        include_phone=False,
+    )
+
+    assert profile.phone is None
+    assert profile.phone_status == "not_requested"
+
+
 def test_profile_owner_opt_out_is_respected(worker: dict[str, object]) -> None:
     opted_out = deepcopy(worker)
     opted_out["displayOptions"] = {"allowProfileParsing": False}
@@ -193,6 +206,8 @@ def test_rubric_match_uses_exact_number_id(profile_html: str) -> None:
     assert service is not None
     assert service.level == "service"
     assert service.experience_code == 11
+    assert match_rubric(profile, 1844, "specialization") == specialization
+    assert match_rubric(profile, 1844, "occupation") is None
     assert match_rubric(profile, 123456789) is None
 
 

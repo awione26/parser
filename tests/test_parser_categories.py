@@ -10,9 +10,13 @@ from uslugi_parser.exceptions import ConfigurationError
 from uslugi_parser.infrastructure.database import (
     Base,
     Category,
+    CategoryYandexOccupation,
+    CategoryYandexSpecialization,
     ParserCategory,
     ParserCategoryRepository,
     ParserCategoryTarget,
+    YandexOccupation,
+    YandexSpecialization,
     make_session_factory,
 )
 from uslugi_parser.parsing import seed_number_id
@@ -27,6 +31,7 @@ def configured_repository(
     Base.metadata.create_all(engine)
     sessions = make_session_factory(engine)
     with sessions.begin() as session:
+        specialization_ids: dict[int, int] = {}
         for definition, is_active, sort_order in rows:
             category = Category(
                 key=definition.key,
@@ -45,11 +50,32 @@ def configured_repository(
             )
             session.flush()
             for position, path in enumerate(definition.seed_paths, start=1):
+                rubric_id = seed_number_id(path)
+                specialization_id = specialization_ids.get(rubric_id)
+                if specialization_id is None:
+                    specialization = YandexSpecialization(
+                        external_number_id=rubric_id,
+                        slug="/" + path.rsplit("--", 1)[0],
+                        name=f"Рубрика {rubric_id}",
+                        source_url=("https://uslugi.yandex.ru/213-moscow/category/" + path),
+                        verification_status="discovered",
+                    )
+                    session.add(specialization)
+                    session.flush()
+                    specialization_id = specialization.id
+                    specialization_ids[rubric_id] = specialization_id
+                session.add(
+                    CategoryYandexSpecialization(
+                        category_id=category.id,
+                        specialization_id=specialization_id,
+                        sort_order=position * 10,
+                    )
+                )
                 session.add(
                     ParserCategoryTarget(
                         category_id=category.id,
-                        taxonomy_level="unknown",
-                        source_rubric_number_id=seed_number_id(path),
+                        taxonomy_level="specialization",
+                        source_rubric_number_id=rubric_id,
                         relative_path=path,
                         is_active=True,
                         sort_order=position * 10,
@@ -65,6 +91,7 @@ def test_repository_returns_database_snapshot_in_active_order() -> None:
         key="plumbers",
         name="Сантехник из БД",
         seed_paths=("database-plumber--9001",),
+        taxonomy_levels=("specialization",),
     )
     repository, _sessions = configured_repository(
         [
@@ -173,10 +200,81 @@ def test_repository_rejects_target_id_that_does_not_match_path() -> None:
         repository.list_active()
 
 
+def test_repository_rejects_unknown_or_unmapped_catalog_target() -> None:
+    """Не обходить legacy-цель или узел из чужой группы каталога."""
+
+    repository, sessions = configured_repository([(DEFAULT_CATEGORIES["plumbers"], True, 10)])
+    with sessions.begin() as session:
+        target = session.scalar(select(ParserCategoryTarget))
+        assert target is not None
+        target.taxonomy_level = "unknown"
+    with pytest.raises(ConfigurationError, match="outside Yandex catalog"):
+        repository.list_active()
+
+    repository, sessions = configured_repository([(DEFAULT_CATEGORIES["plumbers"], True, 10)])
+    with sessions.begin() as session:
+        session.execute(delete(CategoryYandexSpecialization))
+    with pytest.raises(ConfigurationError, match="unmapped Yandex catalog"):
+        repository.list_active()
+
+
+def test_repository_rejects_unverified_or_noncanonical_catalog_node() -> None:
+    """Принимать цель только из проверенной канонической строки справочника."""
+
+    repository, sessions = configured_repository([(DEFAULT_CATEGORIES["plumbers"], True, 10)])
+    with sessions.begin() as session:
+        node = session.scalar(select(YandexSpecialization))
+        assert node is not None
+        node.verification_status = "unverified"
+    with pytest.raises(ConfigurationError, match="unverified specialization"):
+        repository.list_active()
+
+    repository, sessions = configured_repository([(DEFAULT_CATEGORIES["plumbers"], True, 10)])
+    with sessions.begin() as session:
+        node = session.scalar(select(YandexSpecialization))
+        assert node is not None
+        node.source_url = "https://evil.example/category/not-yandex--1844"
+    with pytest.raises(ConfigurationError, match="source_url is not canonical"):
+        repository.list_active()
+
+
+def test_repository_accepts_canonical_catalog_url_without_geo() -> None:
+    """Принимать каноническую root-форму URL наравне с geo-формой."""
+
+    repository, sessions = configured_repository([(DEFAULT_CATEGORIES["plumbers"], True, 10)])
+    with sessions.begin() as session:
+        node = session.scalar(
+            select(YandexSpecialization).where(YandexSpecialization.external_number_id == 1844)
+        )
+        assert node is not None
+        node.source_url = (
+            "https://uslugi.yandex.ru/category/"
+            "remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie--1844"
+        )
+
+    assert repository.list_active()[0].taxonomy_levels == (
+        "specialization",
+        "specialization",
+    )
+
+
+def test_repository_rejects_missing_catalog_source_url() -> None:
+    """Не строить цель только из slug без канонического URL источника."""
+
+    repository, sessions = configured_repository([(DEFAULT_CATEGORIES["plumbers"], True, 10)])
+    with sessions.begin() as session:
+        node = session.scalar(select(YandexSpecialization))
+        assert node is not None
+        node.source_url = None
+
+    with pytest.raises(ConfigurationError, match="source_url is missing"):
+        repository.list_active()
+
+
 def test_repository_rejects_duplicate_rubric_ids_across_rows() -> None:
     """Не обходить две категории, претендующие на одну исходную рубрику."""
 
-    repository, _sessions = configured_repository(
+    repository, sessions = configured_repository(
         [
             (
                 CategoryDefinition("first", "Первая", ("first--10",)),
@@ -184,12 +282,40 @@ def test_repository_rejects_duplicate_rubric_ids_across_rows() -> None:
                 10,
             ),
             (
-                CategoryDefinition("second", "Вторая", ("second--10",)),
+                CategoryDefinition("second", "Вторая", ("second--20",)),
                 True,
                 20,
             ),
         ]
     )
+    with sessions.begin() as session:
+        second_category = session.scalar(select(Category).where(Category.key == "second"))
+        assert second_category is not None
+        second_target = session.scalar(
+            select(ParserCategoryTarget).where(
+                ParserCategoryTarget.category_id == second_category.id
+            )
+        )
+        assert second_target is not None
+        occupation = YandexOccupation(
+            external_number_id=10,
+            slug="/second",
+            name="Вторая рубрика",
+            source_url="https://uslugi.yandex.ru/category/second--10",
+            verification_status="discovered",
+        )
+        session.add(occupation)
+        session.flush()
+        session.add(
+            CategoryYandexOccupation(
+                category_id=second_category.id,
+                occupation_id=occupation.id,
+                sort_order=10,
+            )
+        )
+        second_target.taxonomy_level = "occupation"
+        second_target.source_rubric_number_id = 10
+        second_target.relative_path = "second--10"
 
     with pytest.raises(ConfigurationError, match="duplicate rubric id across categories"):
         repository.list_active()

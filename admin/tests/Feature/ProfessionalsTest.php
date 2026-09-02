@@ -28,15 +28,15 @@ class ProfessionalsTest extends TestCase
     public function test_authenticated_user_can_view_registry_and_filtered_datatable(): void
     {
         $this->actingAs(User::factory()->create(['role' => User::ROLE_VIEWER]));
-        [$professionalId, $categoryId] = $this->seedProfessional();
+        [$professionalId, $rubricId] = $this->seedProfessional();
 
         $this->get('/cp/professionals')
             ->assertOk()
             ->assertSee('Спарсенные данные')
-            ->assertSee('Сантехники');
+            ->assertSee('Сантехнические работы');
 
         $response = $this->getJson(route('admin.datatable.professionals', [
-            'category_id' => $categoryId,
+            'catalog_target' => "specialization:{$rubricId}",
             'city' => 'Москва',
             'search' => ['value' => 'Иван'],
             'draw' => 1,
@@ -48,8 +48,29 @@ class ProfessionalsTest extends TestCase
             ->assertJsonPath('recordsFiltered', 1)
             ->assertJsonPath('data.0.id', $professionalId);
 
+        $this->assertStringContainsString(
+            'Сантехнические работы',
+            (string) $response->json('data.0.categories_display'),
+        );
         $this->assertStringNotContainsString('<script>', (string) $response->json('data.0.full_name'));
         $this->assertStringNotContainsString('+79991234567', (string) $response->getContent());
+
+        $this->get(route('admin.professionals.show', $professionalId))
+            ->assertOk()
+            ->assertSee('Категории Яндекс.Каталога')
+            ->assertSee('Сантехнические работы')
+            ->assertDontSee('Сантехники');
+
+        foreach (["service:{$rubricId}", 'invalid-token'] as $invalidTarget) {
+            $this->getJson(route('admin.datatable.professionals', [
+                'catalog_target' => $invalidTarget,
+                'draw' => 1,
+                'start' => 0,
+                'length' => 25,
+            ]))
+                ->assertOk()
+                ->assertJsonPath('recordsFiltered', 0);
+        }
     }
 
     public function test_admin_can_filter_by_normalized_plaintext_phone(): void
@@ -69,6 +90,76 @@ class ProfessionalsTest extends TestCase
             ->assertJsonPath('data.0.id', $professionalId);
 
         $this->assertStringNotContainsString('+79991234567', (string) $response->getContent());
+    }
+
+    public function test_catalog_filter_and_display_require_the_exact_taxonomy_level(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => User::ROLE_VIEWER]));
+        [$professionalId, $rubricId] = $this->seedProfessional();
+        $now = '2026-08-26 12:00:00';
+        $categoryId = DB::connection('sqlite')->table('categories')->insertGetId([
+            'key' => 'colliding-service',
+            'name' => 'Внутреннее совпадение',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $serviceId = DB::connection('sqlite')->table('yandex_services')->insertGetId([
+            'specialization_id' => null,
+            'external_id_raw' => '/other-service',
+            'external_number_id' => $rubricId,
+            'slug' => 'other-service',
+            'name' => 'Другая услуга с тем же числом',
+            'source_url' => "https://uslugi.yandex.ru/213-moscow/category/other-service--{$rubricId}",
+            'verification_status' => 'confirmed',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        DB::connection('sqlite')->table('category_yandex_services')->insert([
+            'category_id' => $categoryId,
+            'service_id' => $serviceId,
+            'sort_order' => 10,
+        ]);
+        DB::connection('sqlite')->table('parser_categories')->insert([
+            'category_id' => $categoryId,
+            'seed_paths' => json_encode(["other-service--{$rubricId}"]),
+            'is_active' => true,
+            'sort_order' => 20,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        DB::connection('sqlite')->table('parser_category_targets')->insert([
+            'category_id' => $categoryId,
+            'taxonomy_level' => 'service',
+            'source_rubric_number_id' => $rubricId,
+            'relative_path' => "other-service--{$rubricId}",
+            'is_active' => true,
+            'sort_order' => 10,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $this->getJson(route('admin.datatable.professionals', [
+            'catalog_target' => "service:{$rubricId}",
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+        ]))
+            ->assertOk()
+            ->assertJsonPath('recordsFiltered', 0);
+        $this->getJson(route('admin.datatable.professionals', [
+            'catalog_target' => "specialization:{$rubricId}",
+            'draw' => 2,
+            'start' => 0,
+            'length' => 25,
+        ]))
+            ->assertOk()
+            ->assertJsonPath('recordsFiltered', 1)
+            ->assertJsonPath('data.0.id', $professionalId);
+
+        $this->get(route('admin.professionals.show', $professionalId))
+            ->assertOk()
+            ->assertSee('Сантехнические работы')
+            ->assertDontSee('Другая услуга с тем же числом');
     }
 
     public function test_datatable_does_not_repeat_shared_search_with_column_rules(): void
@@ -172,6 +263,41 @@ class ProfessionalsTest extends TestCase
             'created_at' => $now,
             'updated_at' => $now,
         ]);
+        $rubricId = 1844;
+        $specializationId = DB::connection('sqlite')->table('yandex_specializations')->insertGetId([
+            'occupation_id' => null,
+            'external_id_raw' => '/santehnika',
+            'external_number_id' => $rubricId,
+            'slug' => 'santehnicheskie-raboty-i-otoplenie',
+            'name' => 'Сантехнические работы',
+            'source_url' => 'https://uslugi.yandex.ru/213-moscow/category/remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie--1844',
+            'verification_status' => 'confirmed',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        DB::connection('sqlite')->table('category_yandex_specializations')->insert([
+            'category_id' => $categoryId,
+            'specialization_id' => $specializationId,
+            'sort_order' => 10,
+        ]);
+        DB::connection('sqlite')->table('parser_categories')->insert([
+            'category_id' => $categoryId,
+            'seed_paths' => json_encode(['remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie--1844']),
+            'is_active' => true,
+            'sort_order' => 10,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        DB::connection('sqlite')->table('parser_category_targets')->insert([
+            'category_id' => $categoryId,
+            'taxonomy_level' => 'specialization',
+            'source_rubric_number_id' => $rubricId,
+            'relative_path' => 'remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie--1844',
+            'is_active' => true,
+            'sort_order' => 10,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
 
         $professionalId = DB::connection('sqlite')->table('professionals')->insertGetId(array_merge([
             'source' => 'uslugi.yandex.ru',
@@ -203,7 +329,20 @@ class ProfessionalsTest extends TestCase
             'first_seen_at' => $now,
             'last_seen_at' => $now,
         ]);
+        DB::connection('sqlite')->table('professional_category_rubrics')->insert([
+            'professional_id' => $professionalId,
+            'category_id' => $categoryId,
+            'source_rubric_number_id' => $rubricId,
+            'source_rubric_level' => 'specialization',
+            'source_rubric_id' => '/santehnika',
+            'source_rubric_seo_id' => 'santehnicheskie-raboty-i-otoplenie',
+            'source_rubric_name' => 'Название из профиля',
+            'experience_code' => 11,
+            'experience_text' => 'Более 10 лет',
+            'first_seen_at' => $now,
+            'last_seen_at' => $now,
+        ]);
 
-        return [$professionalId, $categoryId];
+        return [$professionalId, $rubricId];
     }
 }

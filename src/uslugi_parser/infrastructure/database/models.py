@@ -468,6 +468,12 @@ class ProfessionalCategoryRubric(Base):
 
     __tablename__ = "professional_category_rubrics"
     __table_args__ = (
+        Index(
+            "ix_professional_category_rubrics_catalog",
+            "source_rubric_level",
+            "source_rubric_number_id",
+            "professional_id",
+        ),
         ForeignKeyConstraint(
             ["professional_id", "category_id"],
             [

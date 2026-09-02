@@ -102,7 +102,11 @@ class DataTableController extends Controller
                 'photo_url',
                 'last_scraped_at',
             ])
-            ->with(['categories:id,name,key'])
+            ->with([
+                'rubrics.yandexOccupation:id,external_number_id,name',
+                'rubrics.yandexSpecialization:id,external_number_id,name',
+                'rubrics.yandexService:id,external_number_id,name',
+            ])
             ->orderByDesc('last_scraped_at');
 
         ProfessionalFilters::apply($query, $request);
@@ -211,12 +215,19 @@ class DataTableController extends Controller
 
     private function categoriesColumn(Professional $row): string
     {
-        if ($row->categories->isEmpty()) {
+        $names = $row->rubrics
+            ->map(fn ($rubric): ?string => $rubric->catalogName())
+            ->filter()
+            ->unique()
+            ->sort(SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+
+        if ($names->isEmpty()) {
             return '<span class="text-muted">—</span>';
         }
 
-        return $row->categories
-            ->map(fn ($category): string => '<span class="badge badge-light border mr-1 mb-1">'.e($category->name).'</span>')
+        return $names
+            ->map(fn (string $name): string => '<span class="badge badge-light border mr-1 mb-1">'.e($name).'</span>')
             ->implode('');
     }
 

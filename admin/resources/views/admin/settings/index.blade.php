@@ -371,8 +371,8 @@
                         <div class="card-header">
                             <span class="settings-card-icon" aria-hidden="true"><i class="fas fa-phone-alt"></i></span>
                             <div>
-                                <h2 class="settings-card-title">Телефоны и браузер</h2>
-                                <span class="settings-card-subtitle">Параметры браузерного получения контактных данных</span>
+                                <h2 class="settings-card-title">Телефон одиночной карточки</h2>
+                                <span class="settings-card-subtitle">Эти параметры применяются только к команде parse-profile</span>
                             </div>
                         </div>
                         <div class="card-body">
@@ -407,8 +407,8 @@
                                             @checked(App\Support\ParserSettings::booleanValue($collectPhone))
                                         >
                                         <label class="custom-control-label" for="setting-collect-phone">
-                                            Получать телефоны
-                                            <span class="settings-switch-description">Запускать браузерный сбор доступных номеров.</span>
+                                            Получать телефон в parse-profile
+                                            <span class="settings-switch-description">Запускать браузерное получение номера только при разборе одной явно указанной карточки.</span>
                                         </label>
                                         @error('SCRAPER_COLLECT_PHONE')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
@@ -437,8 +437,11 @@
                             <div class="settings-phone-note">
                                 <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
                                 <div>
-                                    При <code>SCRAPER_RESPECT_ROBOTS=true</code> раскрытие телефона блокируется;
-                                    отключайте эту защиту, только если это прямо предусмотрено разрешением.
+                                    Массовый обход категорий из «Яндекс.Каталога» телефоны не извлекает,
+                                    независимо от значения <code>SCRAPER_COLLECT_PHONE</code>. При
+                                    <code>SCRAPER_RESPECT_ROBOTS=true</code> получение телефона одиночной
+                                    карточки блокируется; отключайте эту защиту, только если это прямо
+                                    предусмотрено разрешением.
                                     Значение <code>SCRAPER_PHONE_HEADLESS=false</code> не работает в Docker без
                                     настроенного графического <code>DISPLAY</code>.
                                 </div>

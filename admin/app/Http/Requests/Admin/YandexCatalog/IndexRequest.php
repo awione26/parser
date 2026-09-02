@@ -7,7 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Проверяет GET-фильтры read-only справочника Яндекс Услуг.
+ * Проверяет GET-фильтры справочника Яндекс Услуг.
  */
 class IndexRequest extends FormRequest
 {

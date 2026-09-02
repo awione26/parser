@@ -60,7 +60,7 @@
                             <div class="col-md-3"><div class="detail-label">Пол</div><div class="detail-value">{{ \App\Support\ProfessionalPresenter::gender($professional->gender) }}</div></div>
                             <div class="col-md-6"><div class="detail-label">Опыт</div><div class="detail-value">{{ $professional->experience_text ?: '—' }}</div></div>
                             <div class="col-md-6"><div class="detail-label">Статус телефона</div><div class="detail-value">{{ \App\Support\ProfessionalPresenter::phoneStatus($professional->phone_status) }}</div></div>
-                            <div class="col-12"><div class="detail-label">Категории</div><div class="detail-value">@forelse($professional->categories as $category)<span class="badge badge-primary mr-1 mb-1 p-2">{{ $category->name }}</span>@empty — @endforelse</div></div>
+                            <div class="col-12"><div class="detail-label">Категории Яндекс.Каталога</div><div class="detail-value">@forelse($catalogCategories as $categoryName)<span class="badge badge-primary mr-1 mb-1 p-2">{{ $categoryName }}</span>@empty — @endforelse</div></div>
                         </div>
                     </div>
                 </div>
@@ -70,10 +70,10 @@
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
-                                <thead><tr><th>Категория</th><th>Рубрика</th><th>Опыт</th><th>ID</th></tr></thead>
+                                <thead><tr><th>Категория Яндекс.Каталога</th><th>Данные профиля</th><th>Опыт</th><th>ID</th></tr></thead>
                                 <tbody>
                                 @forelse($professional->rubrics as $rubric)
-                                    <tr><td>{{ $rubric->category?->name ?: '—' }}</td><td>{{ $rubric->source_rubric_name ?: $rubric->source_rubric_seo_id ?: '—' }}</td><td>{{ $rubric->experience_text ?: '—' }}</td><td>{{ $rubric->source_rubric_number_id }}</td></tr>
+                                    <tr><td>{{ $rubric->catalogName() ?: '—' }}</td><td>{{ $rubric->source_rubric_name ?: $rubric->source_rubric_seo_id ?: '—' }}</td><td>{{ $rubric->experience_text ?: '—' }}</td><td>{{ $rubric->source_rubric_number_id }}</td></tr>
                                 @empty
                                     <tr><td colspan="4" class="text-center text-muted py-4">Детализация опыта отсутствует</td></tr>
                                 @endforelse

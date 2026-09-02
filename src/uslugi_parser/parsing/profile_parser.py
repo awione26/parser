@@ -41,8 +41,14 @@ def parse_profile_state(
     profile_url: str,
     *,
     today: date | None = None,
+    include_phone: bool = True,
 ) -> ParsedProfessional:
-    """Создаёт карточку мастера из state при явном согласии владельца профиля."""
+    """Создать карточку мастера из state при разрешённом разборе профиля.
+
+    `include_phone=False` обозначает жёсткую границу: номер не извлекается
+    даже из публичного WhatsApp или поля state. Этот режим использует
+    массовый обход Каталога Яндекса.
+    """
 
     worker = find_profile_worker(state, profile_url)
     display_options = worker.get("displayOptions")
@@ -76,7 +82,9 @@ def parse_profile_state(
     gender = gender_map.get(str(gender_value).lower()) if gender_value else None
     all_experience_values = experience_values(worker)
     experience_code = max(all_experience_values) if all_experience_values else None
-    phone, phone_status = phone_from_worker(worker, country)
+    phone, phone_status = (
+        phone_from_worker(worker, country) if include_phone else (None, "not_requested")
+    )
     rubrics = rubric_evidence(worker)
 
     return ParsedProfessional(
@@ -108,7 +116,13 @@ def parse_profile_html(
     profile_url: str,
     *,
     today: date | None = None,
+    include_phone: bool = True,
 ) -> ParsedProfessional:
-    """Извлекает state из HTML профиля и создаёт доменную карточку мастера."""
+    """Извлечь state из HTML и создать карточку с явной политикой телефона."""
 
-    return parse_profile_state(extract_preloaded_state(html), profile_url, today=today)
+    return parse_profile_state(
+        extract_preloaded_state(html),
+        profile_url,
+        today=today,
+        include_phone=include_phone,
+    )

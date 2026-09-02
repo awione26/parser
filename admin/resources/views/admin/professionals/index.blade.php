@@ -29,10 +29,14 @@
                             <input id="filter-search" class="form-control" type="search" placeholder="Начните вводить…">
                         </div>
                         <div class="col-lg-3 col-md-6 form-group">
-                            <label class="filter-label" for="filter-category">Категория</label>
+                            <label class="filter-label" for="filter-category">Категория Яндекс.Каталога</label>
                             <select id="filter-category" class="custom-select">
                                 <option value="">Все категории</option>
-                                @foreach($categories as $category)<option value="{{ $category->id }}">{{ $category->name }}</option>@endforeach
+                                @foreach($catalogTargets as $target)
+                                    <option value="{{ $target->token }}">
+                                        {{ $target->name }} (№ {{ $target->external_number_id }})
+                                    </option>
+                                @endforeach
                             </select>
                         </div>
                         <div class="col-lg-2 col-md-4 form-group">
@@ -94,7 +98,7 @@
                 <div id="table-error" class="alert alert-danger d-none" role="alert">Не удалось загрузить данные. Проверьте соединение с БД парсера.</div>
                 <div class="table-responsive">
                     <table id="professionals" class="table table-bordered table-hover w-100">
-                        <thead><tr>@if(Auth::user()->isAdmin())<th class="selection-column"><input id="select-current-page" type="checkbox" aria-label="Выбрать всех мастеров на текущей странице"></th>@endif<th>Фото</th><th>ФИО</th><th>Телефон</th><th>Локация</th><th>Возраст</th><th>Пол</th><th>Опыт</th><th>Категории</th><th>Ресурс</th><th>Спарсено</th><th>Действия</th></tr></thead>
+                        <thead><tr>@if(Auth::user()->isAdmin())<th class="selection-column"><input id="select-current-page" type="checkbox" aria-label="Выбрать всех мастеров на текущей странице"></th>@endif<th>Фото</th><th>ФИО</th><th>Телефон</th><th>Локация</th><th>Возраст</th><th>Пол</th><th>Опыт</th><th>Яндекс.Категории</th><th>Ресурс</th><th>Спарсено</th><th>Действия</th></tr></thead>
                     </table>
                 </div>
             </div>
@@ -120,7 +124,7 @@ $(function () {
     function filterValues() {
         return {
             search: $('#filter-search').val() || '',
-            category_id: $('#filter-category').val() || '',
+            catalog_target: $('#filter-category').val() || '',
             gender: $('#filter-gender').val() || '',
             source: $('#filter-source').val() || '',
             country: $('#filter-country').val() || '',

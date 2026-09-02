@@ -148,7 +148,13 @@ def test_mysql_migration_plaintext_concurrent_upsert_and_cascade() -> None:
             assert identity_collation == "utf8mb4_unicode_ci"
             assert parser_category_collation == "utf8mb4_unicode_ci"
             database_categories = ParserCategoryRepository(sessions).list_active()
-            assert database_categories == list(DEFAULT_CATEGORIES.values())
+            assert database_categories == [
+                replace(
+                    category,
+                    taxonomy_levels=("specialization",) * len(category.seed_paths),
+                )
+                for category in DEFAULT_CATEGORIES.values()
+            ]
             with sessions() as session:
                 assert session.scalar(select(func.count(Category.id))) == 11
                 assert session.scalar(select(func.count(ParserCategory.category_id))) == 11

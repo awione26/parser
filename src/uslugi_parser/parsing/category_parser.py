@@ -103,10 +103,22 @@ def rubric_evidence(worker: dict[str, Any]) -> tuple[RubricEvidence, ...]:
     return tuple(result)
 
 
-def match_rubric(profile: ParsedProfessional, number_id: int) -> RubricEvidence | None:
-    """Находит точную рубрику профиля, предпочитая наиболее конкретный уровень."""
+def match_rubric(
+    profile: ParsedProfessional,
+    number_id: int,
+    expected_level: str | None = None,
+) -> RubricEvidence | None:
+    """Найти точную рубрику профиля по ID и уровню каталога.
 
-    matches = [item for item in profile.rubrics if item.number_id == number_id]
+    Уровень обязателен для целей, пришедших из Каталога Яндекса. Режим
+    без уровня сохранён для ручного импорта старых файлов.
+    """
+
+    matches = [
+        item
+        for item in profile.rubrics
+        if item.number_id == number_id and (expected_level is None or item.level == expected_level)
+    ]
     if not matches:
         return None
     priority = {"service": 0, "specialization": 1, "occupation": 2}

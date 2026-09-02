@@ -142,7 +142,10 @@ def _build_parser() -> argparse.ArgumentParser:
         help="use only when written operator permission explicitly allows it",
     )
 
-    crawl_parser = commands.add_parser("crawl", help="discover category cards and upsert profiles")
+    crawl_parser = commands.add_parser(
+        "crawl",
+        help="discover catalog cards without phones and upsert profiles",
+    )
     crawl_parser.add_argument(
         "--category",
         action="append",
@@ -166,10 +169,6 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="print JSON, do not write MySQL",
     )
-    phone_group = crawl_parser.add_mutually_exclusive_group()
-    phone_group.add_argument("--collect-phone", dest="collect_phone", action="store_true")
-    phone_group.add_argument("--no-collect-phone", dest="collect_phone", action="store_false")
-    phone_group.set_defaults(collect_phone=None)
     robots_group = crawl_parser.add_mutually_exclusive_group()
     robots_group.add_argument("--respect-robots", dest="respect_robots", action="store_true")
     robots_group.add_argument(
@@ -258,7 +257,6 @@ async def _run_crawl(args: argparse.Namespace, settings: Settings) -> int:
         settings = settings.with_overrides(**changes)
     if not settings.respect_robots:
         logger.warning("robots_policy_override_enabled")
-    collect_phone = settings.collect_phone if args.collect_phone is None else args.collect_phone
     categories = _category_repository(settings).resolve(args.category)
     repository = None if args.dry_run else _repository(settings)
     stats = await crawl(
@@ -266,10 +264,8 @@ async def _run_crawl(args: argparse.Namespace, settings: Settings) -> int:
         categories=categories,
         max_pages=args.max_pages,
         max_profiles=args.max_profiles,
-        collect_phone=collect_phone,
         repository=repository,
         fetcher_factory=_fetcher,
-        phone_collector_factory=_phone_collector,
     )
     _json_dump(stats.public_dict())
     return 0

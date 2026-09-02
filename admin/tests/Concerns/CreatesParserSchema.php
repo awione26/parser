@@ -192,6 +192,10 @@ trait CreatesParserSchema
             $table->dateTime('first_seen_at');
             $table->dateTime('last_seen_at');
             $table->primary(['professional_id', 'category_id', 'source_rubric_number_id']);
+            $table->index(
+                ['source_rubric_level', 'source_rubric_number_id', 'professional_id'],
+                'ix_professional_category_rubrics_catalog',
+            );
             $table->foreign(['professional_id', 'category_id'])
                 ->references(['professional_id', 'category_id'])
                 ->on('professional_categories')

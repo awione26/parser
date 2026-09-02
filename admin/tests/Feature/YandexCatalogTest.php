@@ -42,7 +42,7 @@ class YandexCatalogTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.catalog.index'))
             ->assertOk()
-            ->assertSee('Каталог Яндекса')
+            ->assertSee('Яндекс.Каталог')
             ->assertSee('Найдено строк:');
     }
 
@@ -60,9 +60,9 @@ class YandexCatalogTest extends TestCase
             ->assertSee('&lt;script&gt;Монтаж смесителя&lt;/script&gt;', false)
             ->assertDontSee('<script>Монтаж смесителя</script>', false)
             ->assertSee('https://uslugi.yandex.ru/category/remont/santehnika--101', false)
+            ->assertSee('https://uslugi.yandex.ru/213-moscow/category/remont/smesitel--303', false)
             ->assertSee('rel="noopener noreferrer nofollow"', false)
             ->assertDontSee('javascript:alert(1)', false)
-            ->assertDontSee('utm_source', false)
             ->assertSee('В парсинге');
 
         $this->assertSame(3, $response->viewData('rows')->total());
@@ -142,18 +142,203 @@ class YandexCatalogTest extends TestCase
             ]);
     }
 
-    public function test_categories_page_shows_catalog_counts_and_filtered_link(): void
+    public function test_legacy_categories_section_is_removed(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $this->actingAs($admin)
+            ->get('/cp/categories')
+            ->assertNotFound();
+
+        $this->actingAs($admin)
+            ->get(route('admin.catalog.index'))
+            ->assertOk()
+            ->assertDontSee('/cp/categories', false);
+    }
+
+    public function test_admin_can_atomically_disable_and_enable_a_canonical_catalog_target(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $ids = $this->seedHierarchy();
+        $route = route('admin.catalog.parsing', [
+            'category' => $ids['category'],
+            'taxonomyLevel' => 'service',
+            'catalogNode' => $ids['service'],
+        ]);
 
         $this->actingAs($admin)
-            ->get(route('admin.categories.index'))
-            ->assertOk()
-            ->assertSee('Н: 1')
-            ->assertSee('С: 1')
-            ->assertSee('У: 1')
-            ->assertSee(route('admin.catalog.index', ['group' => $ids['category']]), false);
+            ->patch($route, ['is_active' => '0'])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('parser_category_targets', [
+            'category_id' => $ids['category'],
+            'source_rubric_number_id' => 303,
+            'is_active' => false,
+        ], 'sqlite');
+        $configuration = $this->parserDb()->table('parser_categories')
+            ->where('category_id', $ids['category'])
+            ->first();
+        $this->assertNotNull($configuration);
+        $this->assertSame(0, (int) $configuration->is_active);
+        $this->assertSame([], json_decode((string) $configuration->seed_paths, true));
+
+        $this->actingAs($admin)
+            ->patch($route, ['is_active' => '1'])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('parser_category_targets', [
+            'category_id' => $ids['category'],
+            'taxonomy_level' => 'service',
+            'source_rubric_number_id' => 303,
+            'relative_path' => 'remont/smesitel--303',
+            'is_active' => true,
+        ], 'sqlite');
+        $configuration = $this->parserDb()->table('parser_categories')
+            ->where('category_id', $ids['category'])
+            ->first();
+        $this->assertNotNull($configuration);
+        $this->assertSame(1, (int) $configuration->is_active);
+        $this->assertSame(
+            ['remont/smesitel--303'],
+            json_decode((string) $configuration->seed_paths, true),
+        );
+    }
+
+    public function test_enabling_one_target_does_not_restore_stale_targets_from_disabled_config(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $ids = $this->seedHierarchy();
+        $now = '2026-09-02 10:00:00';
+
+        $this->parserDb()->table('parser_category_targets')->insert([
+            'category_id' => $ids['category'],
+            'taxonomy_level' => 'occupation',
+            'source_rubric_number_id' => 101,
+            'relative_path' => 'remont/santehnika--101',
+            'is_active' => true,
+            'sort_order' => 20,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $this->parserDb()->table('parser_categories')
+            ->where('category_id', $ids['category'])
+            ->update([
+                'seed_paths' => json_encode([
+                    'remont/smesitel--303',
+                    'remont/santehnika--101',
+                ]),
+                'is_active' => false,
+            ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.catalog.parsing', [
+                'category' => $ids['category'],
+                'taxonomyLevel' => 'service',
+                'catalogNode' => $ids['service'],
+            ]), ['is_active' => '1'])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('parser_category_targets', [
+            'category_id' => $ids['category'],
+            'source_rubric_number_id' => 303,
+            'is_active' => true,
+        ], 'sqlite');
+        $this->assertDatabaseHas('parser_category_targets', [
+            'category_id' => $ids['category'],
+            'source_rubric_number_id' => 101,
+            'is_active' => false,
+        ], 'sqlite');
+        $configuration = $this->parserDb()->table('parser_categories')
+            ->where('category_id', $ids['category'])
+            ->first();
+        $this->assertNotNull($configuration);
+        $this->assertSame(
+            ['remont/smesitel--303'],
+            json_decode((string) $configuration->seed_paths, true),
+        );
+    }
+
+    public function test_catalog_target_update_requires_admin_link_canonical_url_and_unique_rubric(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $viewer = User::factory()->create(['role' => User::ROLE_VIEWER]);
+        $ids = $this->seedHierarchy();
+        $serviceRoute = route('admin.catalog.parsing', [
+            'category' => $ids['category'],
+            'taxonomyLevel' => 'service',
+            'catalogNode' => $ids['service'],
+        ]);
+
+        $this->patch($serviceRoute, ['is_active' => '0'])
+            ->assertRedirect(route('login'));
+        $this->actingAs($viewer)
+            ->patch($serviceRoute, ['is_active' => '0'])
+            ->assertForbidden();
+
+        $unsafeRoute = route('admin.catalog.parsing', [
+            'category' => $ids['category'],
+            'taxonomyLevel' => 'specialization',
+            'catalogNode' => $ids['specialization'],
+        ]);
+        $this->actingAs($admin)
+            ->patchJson($unsafeRoute, ['is_active' => true])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('catalog');
+
+        $this->parserDb()->table('yandex_specializations')
+            ->where('id', $ids['specialization'])
+            ->update([
+                'source_url' => 'https://uslugi.yandex.ru/category/santehnicheskie-raboty--202',
+            ]);
+        $this->actingAs($admin)
+            ->patchJson($unsafeRoute, ['is_active' => true])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('catalog');
+
+        $otherCategory = $this->insertCategory('electricians', 'Электрики');
+        $this->actingAs($admin)
+            ->patchJson(route('admin.catalog.parsing', [
+                'category' => $otherCategory,
+                'taxonomyLevel' => 'service',
+                'catalogNode' => $ids['service'],
+            ]), ['is_active' => true])
+            ->assertNotFound();
+
+        $this->parserDb()->table('parser_categories')->insert([
+            'category_id' => $otherCategory,
+            'seed_paths' => json_encode(['remont/santehnika--101']),
+            'is_active' => true,
+            'sort_order' => 20,
+            'created_at' => '2026-09-01 10:00:00',
+            'updated_at' => '2026-09-01 10:00:00',
+        ]);
+        $this->parserDb()->table('category_yandex_occupations')->insert([
+            'category_id' => $otherCategory,
+            'occupation_id' => $ids['occupation'],
+            'sort_order' => 10,
+        ]);
+        $this->parserDb()->table('parser_category_targets')->insert([
+            'category_id' => $otherCategory,
+            'taxonomy_level' => 'occupation',
+            'source_rubric_number_id' => 101,
+            'relative_path' => 'remont/santehnika--101',
+            'is_active' => true,
+            'sort_order' => 10,
+            'created_at' => '2026-09-01 10:00:00',
+            'updated_at' => '2026-09-01 10:00:00',
+        ]);
+
+        $this->actingAs($admin)
+            ->patchJson(route('admin.catalog.parsing', [
+                'category' => $ids['category'],
+                'taxonomyLevel' => 'occupation',
+                'catalogNode' => $ids['occupation'],
+            ]), ['is_active' => true])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('catalog');
     }
 
     /**
@@ -167,7 +352,7 @@ class YandexCatalogTest extends TestCase
         $occupationId = $this->insertTaxonomy('yandex_occupations', [
             'external_id_raw' => '/remont-i-stroitel_stvo',
             'external_number_id' => 101,
-            'slug' => 'remont-i-stroitelstvo',
+            'slug' => '/remont/santehnika',
             'name' => 'Ремонт и строительство',
             'source_url' => 'https://uslugi.yandex.ru/category/remont/santehnika--101',
             'verification_status' => 'confirmed',
@@ -185,15 +370,15 @@ class YandexCatalogTest extends TestCase
             'specialization_id' => $specializationId,
             'external_id_raw' => '/montazh-smesitelya',
             'external_number_id' => 303,
-            'slug' => 'montazh-smesitelya',
+            'slug' => '/remont/smesitel',
             'name' => '<script>Монтаж смесителя</script>',
-            'source_url' => 'https://uslugi.yandex.ru/category/remont/smesitel--303?utm_source=test',
+            'source_url' => 'https://uslugi.yandex.ru/213-moscow/category/remont/smesitel--303',
             'verification_status' => 'confirmed',
         ]);
 
         $this->parserDb()->table('parser_categories')->insert([
             'category_id' => $categoryId,
-            'seed_paths' => json_encode(['category/remont/smesitel--303']),
+            'seed_paths' => json_encode(['remont/smesitel--303']),
             'is_active' => true,
             'sort_order' => 10,
             'created_at' => '2026-09-01 10:00:00',
@@ -203,7 +388,7 @@ class YandexCatalogTest extends TestCase
             'category_id' => $categoryId,
             'taxonomy_level' => 'service',
             'source_rubric_number_id' => 303,
-            'relative_path' => 'category/remont/smesitel--303',
+            'relative_path' => 'remont/smesitel--303',
             'is_active' => true,
             'sort_order' => 10,
             'created_at' => '2026-09-01 10:00:00',

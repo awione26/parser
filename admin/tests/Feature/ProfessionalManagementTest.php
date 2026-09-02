@@ -25,6 +25,9 @@ class ProfessionalManagementTest extends TestCase
 
     private int $professionalSequence = 0;
 
+    /** @var array<int, int> */
+    private array $categoryRubricIds = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -341,7 +344,7 @@ class ProfessionalManagementTest extends TestCase
 
         $response = $this->actingAs($admin)->get(route('admin.professionals.export', [
             'search' => ['value' => 'Иван'],
-            'category_id' => $matchingCategoryId,
+            'catalog_target' => 'specialization:'.$this->categoryRubricIds[$matchingCategoryId],
             'city' => 'Москва',
         ]));
 
@@ -360,13 +363,52 @@ class ProfessionalManagementTest extends TestCase
         $this->categorySequence++;
         $now = '2026-08-27 12:00:00';
 
-        return (int) $this->parserTable('categories')->insertGetId(array_merge([
+        $categoryId = (int) $this->parserTable('categories')->insertGetId(array_merge([
             'key' => "category-{$this->categorySequence}",
             'name' => "Категория {$this->categorySequence}",
             'note' => null,
             'created_at' => $now,
             'updated_at' => $now,
         ], $overrides));
+        $rubricId = 20_000 + $this->categorySequence;
+        $specializationId = (int) $this->parserTable('yandex_specializations')->insertGetId([
+            'occupation_id' => null,
+            'external_id_raw' => "/specialization/{$rubricId}",
+            'external_number_id' => $rubricId,
+            'slug' => "specialization-{$rubricId}",
+            'name' => "Яндекс категория {$this->categorySequence}",
+            'source_url' => "https://uslugi.yandex.ru/213-moscow/category/catalog/specialization-{$rubricId}--{$rubricId}",
+            'verification_status' => 'confirmed',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $this->parserTable('category_yandex_specializations')->insert([
+            'category_id' => $categoryId,
+            'specialization_id' => $specializationId,
+            'sort_order' => 10,
+        ]);
+        $relativePath = "catalog/specialization-{$rubricId}--{$rubricId}";
+        $this->parserTable('parser_categories')->insert([
+            'category_id' => $categoryId,
+            'seed_paths' => json_encode([$relativePath]),
+            'is_active' => true,
+            'sort_order' => $this->categorySequence * 10,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $this->parserTable('parser_category_targets')->insert([
+            'category_id' => $categoryId,
+            'taxonomy_level' => 'specialization',
+            'source_rubric_number_id' => $rubricId,
+            'relative_path' => $relativePath,
+            'is_active' => true,
+            'sort_order' => 10,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+        $this->categoryRubricIds[$categoryId] = $rubricId;
+
+        return $categoryId;
     }
 
     /**
@@ -403,6 +445,7 @@ class ProfessionalManagementTest extends TestCase
         ], $overrides));
 
         if ($categoryId !== null) {
+            $rubricId = $this->categoryRubricIds[$categoryId];
             $this->parserTable('professional_categories')->insert([
                 'professional_id' => $professionalId,
                 'category_id' => $categoryId,
@@ -412,10 +455,11 @@ class ProfessionalManagementTest extends TestCase
             $this->parserTable('professional_category_rubrics')->insert([
                 'professional_id' => $professionalId,
                 'category_id' => $categoryId,
-                'source_rubric_number_id' => 10_000 + $sequence,
-                'source_rubric_id' => "/rubric/{$sequence}",
-                'source_rubric_seo_id' => "rubric-{$sequence}",
-                'source_rubric_name' => "Рубрика {$sequence}",
+                'source_rubric_number_id' => $rubricId,
+                'source_rubric_level' => 'specialization',
+                'source_rubric_id' => "/rubric/{$rubricId}",
+                'source_rubric_seo_id' => "rubric-{$rubricId}",
+                'source_rubric_name' => "Название профиля {$sequence}",
                 'experience_code' => 11,
                 'experience_text' => 'Более 10 лет',
                 'first_seen_at' => $now,

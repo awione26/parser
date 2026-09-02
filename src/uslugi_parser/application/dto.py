@@ -22,7 +22,6 @@ class CrawlOptions:
 
     max_pages: int
     max_profiles: int
-    collect_phone: bool
 
     def __post_init__(self) -> None:
         """Проверить ограничения сразу после создания неизменяемого объекта."""

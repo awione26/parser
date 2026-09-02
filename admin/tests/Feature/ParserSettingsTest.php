@@ -69,6 +69,8 @@ class ParserSettingsTest extends TestCase
             ->assertSee('Настройки')
             ->assertSee('Сохранить настройки')
             ->assertSee('письменного разрешения Яндекса')
+            ->assertSee('только к команде parse-profile')
+            ->assertSee('Массовый обход категорий из «Яндекс.Каталога» телефоны не извлекает')
             ->assertDontSee('YANDEX_OPERATOR_PERMISSION')
             ->assertDontSee('YANDEX_PHONE_PERMISSION')
             ->assertDontSee('UNSUPPORTED_PRIVATE_KEY')

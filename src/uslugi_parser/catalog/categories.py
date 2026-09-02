@@ -35,6 +35,7 @@ class CategoryDefinition:
     name: str
     seed_paths: tuple[str, ...]
     note: str = ""
+    taxonomy_levels: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         """Проверить идентификатор, название и безопасные относительные пути категории."""
@@ -57,6 +58,27 @@ class CategoryDefinition:
 
         if not isinstance(self.note, str):
             raise TypeError("category note must be a string")
+        if not isinstance(self.taxonomy_levels, tuple):
+            raise TypeError("category taxonomy_levels must be a tuple")
+        if self.taxonomy_levels and len(self.taxonomy_levels) != len(self.seed_paths):
+            raise ValueError("category taxonomy_levels must match seed_paths length")
+        invalid_levels = set(self.taxonomy_levels) - {
+            "occupation",
+            "specialization",
+            "service",
+        }
+        if invalid_levels:
+            raise ValueError(
+                "category taxonomy_levels contain unsupported values: "
+                + ", ".join(sorted(invalid_levels))
+            )
+
+    def targets(self) -> tuple[tuple[str, str | None], ...]:
+        """Вернуть URL-пути вместе с ожидаемым уровнем рубрики каталога."""
+
+        if not self.taxonomy_levels:
+            return tuple((path, None) for path in self.seed_paths)
+        return tuple(zip(self.seed_paths, self.taxonomy_levels, strict=True))
 
     def urls(self, geo: str) -> tuple[str, ...]:
         """Строит абсолютные URL исходных рубрик для проверенного geo slug в заданном порядке."""

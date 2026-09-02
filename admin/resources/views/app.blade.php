@@ -94,15 +94,9 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="{{ route('admin.categories.index') }}" class="nav-link{{ Request::is('cp/categories*') ? ' active' : '' }}">
-                                <i class="nav-icon fas fa-list-alt" aria-hidden="true"></i>
-                                <p>Категории</p>
-                            </a>
-                        </li>
-                        <li class="nav-item">
                             <a href="{{ route('admin.catalog.index') }}" class="nav-link{{ Request::is('cp/catalog*') ? ' active' : '' }}">
                                 <i class="nav-icon fas fa-sitemap" aria-hidden="true"></i>
-                                <p>Каталог Яндекса</p>
+                                <p>Яндекс.Каталог</p>
                             </a>
                         </li>
                         <li class="nav-item">

@@ -69,8 +69,8 @@ def save_profile(
         return repository.upsert(profile, MANUAL_CATEGORY)
     evidences = [
         evidence
-        for path in category.seed_paths
-        if (evidence := match_rubric(profile, seed_number_id(path))) is not None
+        for path, expected_level in category.targets()
+        if (evidence := match_rubric(profile, seed_number_id(path), expected_level)) is not None
     ]
     if not evidences:
         raise ConfigurationError(f"profile has no exact rubric match for category {category.key!r}")

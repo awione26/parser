@@ -239,7 +239,6 @@ def test_crawl_resolves_categories_before_network(monkeypatch: pytest.MonkeyPatc
         category=["disabled"],
         geo=None,
         respect_robots=None,
-        collect_phone=None,
         dry_run=True,
         max_pages=1,
         max_profiles=1,
@@ -256,6 +255,15 @@ def test_cli_accepts_database_category_key_without_static_choices() -> None:
     args = _build_parser().parse_args(["crawl", "--category", "future_category"])
 
     assert args.category == ["future_category"]
+
+
+def test_crawl_command_has_no_phone_collection_switch() -> None:
+    """Не позволять включить сбор телефонов для массового crawl."""
+
+    with pytest.raises(SystemExit) as error:
+        _build_parser().parse_args(["crawl", "--collect-phone"])
+
+    assert error.value.code == 2
 
 
 def test_cli_database_settings_override_environment(monkeypatch: pytest.MonkeyPatch) -> None:
