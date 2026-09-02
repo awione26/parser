@@ -35,6 +35,8 @@ Route::middleware('auth')->group(function (): void {
             ->name('admin.settings.update');
         Route::get('catalog', [YandexCatalogController::class, 'index'])
             ->name('admin.catalog.index');
+        Route::get('datatable/catalog', [YandexCatalogController::class, 'data'])
+            ->name('admin.datatable.catalog');
         Route::get('catalog/create', [YandexCatalogNodeController::class, 'create'])
             ->name('admin.catalog.create');
         Route::post('catalog', [YandexCatalogNodeController::class, 'store'])

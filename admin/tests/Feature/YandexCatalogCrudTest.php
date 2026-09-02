@@ -48,8 +48,14 @@ class YandexCatalogCrudTest extends TestCase
             ->get(route('admin.catalog.index'))
             ->assertOk()
             ->assertSee('Добавить категорию')
-            ->assertSee($editRoute, false)
             ->assertDontSee('<option value="unverified"', false);
+        $catalogData = $this->actingAs($admin)
+            ->getJson(route('admin.datatable.catalog', $this->dataTableParameters()))
+            ->assertOk();
+        $this->assertStringContainsString(
+            $editRoute,
+            collect($catalogData->json('data'))->pluck('actions')->implode(''),
+        );
         $this->actingAs($admin)
             ->get(route('admin.catalog.create'))
             ->assertOk()
@@ -282,12 +288,15 @@ class YandexCatalogCrudTest extends TestCase
         $this->assertNotNull($configuration);
         $this->assertSame(0, (int) $configuration->is_active);
         $this->assertSame([], json_decode((string) $configuration->seed_paths, true));
-        $catalog = $this->actingAs($admin)->get(route('admin.catalog.index', [
-            'group' => $ids['category'],
-            'q' => '303',
-        ]));
-        $catalog->assertOk();
-        $this->assertSame(0, $catalog->viewData('rows')->total());
+        $this->actingAs($admin)
+            ->getJson(route('admin.datatable.catalog', [
+                ...$this->dataTableParameters(),
+                'group' => $ids['category'],
+                'q' => '303',
+            ]))
+            ->assertOk()
+            ->assertJsonPath('recordsTotal', 0)
+            ->assertJsonCount(0, 'data');
 
         // Имитируем результат обхода, который снял старый план до удаления строки.
         $this->insertProfessionalEvidence($ids['category'], 303, 'service');
@@ -666,6 +675,43 @@ class YandexCatalogCrudTest extends TestCase
             'first_seen_at' => $now,
             'last_seen_at' => $now,
         ]);
+    }
+
+    /**
+     * Сформировать параметры запроса серверной таблицы каталога.
+     *
+     * @return array<string, mixed>
+     */
+    private function dataTableParameters(): array
+    {
+        $columns = [
+            ['data' => 'group', 'name' => 'category_name'],
+            ['data' => 'occupation', 'name' => 'occupation_name'],
+            ['data' => 'specialization', 'name' => 'specialization_name'],
+            ['data' => 'service', 'name' => 'service_name'],
+            ['data' => 'slug_url', 'name' => 'target_slug'],
+            ['data' => 'status', 'name' => 'target_verification_status'],
+            ['data' => 'parsing', 'name' => 'used_for_parsing'],
+            ['data' => 'actions', 'name' => ''],
+        ];
+
+        return [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'order' => [['column' => 0, 'dir' => 'asc']],
+            'columns' => array_map(
+                static fn (array $column, int $index): array => [
+                    ...$column,
+                    'searchable' => 'false',
+                    'orderable' => $index === 7 ? 'false' : 'true',
+                    'search' => ['value' => '', 'regex' => 'false'],
+                ],
+                $columns,
+                array_keys($columns),
+            ),
+            'search' => ['value' => '', 'regex' => 'false'],
+        ];
     }
 
     /**

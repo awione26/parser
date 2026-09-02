@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Requests\Admin\YandexCatalog\DataRequest;
 use App\Http\Requests\Admin\YandexCatalog\IndexRequest;
 use App\Http\Requests\Admin\YandexCatalog\UpdateParsingRequest;
 use App\Models\Category;
@@ -17,6 +18,8 @@ use Illuminate\Database\Query\JoinClause;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Yajra\DataTables\Facades\DataTables;
 
 /**
  * Показывает таксономию Яндекс Услуг и управляет только выбором целей обхода.
@@ -46,65 +49,74 @@ final class YandexCatalogController extends Controller
     }
 
     /**
-     * Вывести серверную таблицу направлений, специализаций и услуг с фильтрами.
+     * Показать страницу каталога и передать справочники для клиентских фильтров.
      */
     public function index(IndexRequest $request): View
     {
-        $filters = $request->validated();
-        $query = $this->catalogQuery();
-
-        $this->applyFilters($query, $filters);
-
-        $rows = $query
-            ->orderBy('category_sort_order')
-            ->orderBy('category_name')
-            ->orderBy('taxonomy_level_sort')
-            ->orderBy('link_sort_order')
-            ->orderBy('occupation_name')
-            ->orderBy('specialization_name')
-            ->orderBy('service_name')
-            ->paginate(50)
-            ->appends($request->safe()->only([
-                'q',
-                'group',
-                'status',
-                'has_id',
-                'used_for_parsing',
-            ]));
-
-        $rows->through(function (object $row): object {
-            $status = (string) $row->target_verification_status;
-            $row->status_label = self::STATUS_LABELS[$status] ?? 'Неизвестный статус';
-            $row->status_badge = self::STATUS_BADGES[$status] ?? 'secondary';
-            $row->safe_source_url = YandexCatalog::safeSourceUrl($row->target_source_url);
-            $row->used_for_parsing = (bool) $row->used_for_parsing;
-            $urlPath = YandexCatalog::crawlPath(
-                $row->safe_source_url,
-                $row->target_external_number_id,
-            );
-            $catalogPath = YandexCatalog::catalogPath(
-                $row->target_slug,
-                $row->target_external_number_id,
-            );
-            $row->can_toggle_parsing = $urlPath !== null
-                && $catalogPath !== null
-                && hash_equals($catalogPath, $urlPath)
-                && in_array(
-                    $row->target_verification_status,
-                    YandexCatalog::USABLE_STATUSES,
-                    true,
-                );
-
-            return $row;
-        });
-
         return view('admin.catalog.index', [
             'title' => 'Яндекс.Каталог',
-            'rows' => $rows,
             'groups' => $this->catalogGroups(),
-            'filters' => $filters,
+            'filters' => $request->validated(),
             'statusOptions' => YandexCatalog::STATUS_LABELS,
         ]);
+    }
+
+    /**
+     * Вернуть отфильтрованные строки каталога для серверной таблицы DataTables.
+     */
+    public function data(DataRequest $request): JsonResponse
+    {
+        $query = $this->catalogQuery();
+        $this->applyFilters($query, $request->validated());
+        $order = $request->validated('order', []);
+
+        return DataTables::query($query)
+            ->skipAutoFilter()
+            ->order(fn (Builder $orderedQuery) => $this->applyDataTableOrdering(
+                $orderedQuery,
+                is_array($order) ? $order : [],
+            ))
+            ->addColumn('group', fn (object $row): string => $this->groupColumn($row))
+            ->addColumn('occupation', fn (object $row): string => $this->nodeColumn(
+                $row,
+                'occupation',
+                'occupationId',
+            ))
+            ->addColumn('specialization', fn (object $row): string => $this->nodeColumn(
+                $row,
+                'specialization',
+                'specId',
+            ))
+            ->addColumn('service', fn (object $row): string => $this->nodeColumn(
+                $row,
+                'service',
+                'serviceId',
+            ))
+            ->addColumn('slug_url', fn (object $row): string => $this->slugUrlColumn($row))
+            ->addColumn('status', fn (object $row): string => $this->statusColumn($row))
+            ->addColumn('parsing', fn (object $row): string => $this->parsingColumn($row))
+            ->addColumn('actions', fn (object $row): string => $this->actionsColumn($row))
+            ->rawColumns([
+                'group',
+                'occupation',
+                'specialization',
+                'service',
+                'slug_url',
+                'status',
+                'parsing',
+                'actions',
+            ])
+            ->only([
+                'group',
+                'occupation',
+                'specialization',
+                'service',
+                'slug_url',
+                'status',
+                'parsing',
+                'actions',
+            ])
+            ->toJson();
     }
 
     /**
@@ -484,6 +496,214 @@ final class YandexCatalogController extends Controller
         if (isset($filters['used_for_parsing'])) {
             $query->where('used_for_parsing', '=', (string) $filters['used_for_parsing'] === '1' ? 1 : 0);
         }
+    }
+
+    /**
+     * Применить только разрешённые колонки сортировки и добавить стабильные поля.
+     *
+     * @param  array<int, array{column?: mixed, dir?: mixed}>  $order
+     */
+    private function applyDataTableOrdering(Builder $query, array $order): void
+    {
+        $columns = [
+            0 => 'category_name',
+            1 => 'occupation_name',
+            2 => 'specialization_name',
+            3 => 'service_name',
+            4 => 'target_slug',
+            5 => 'target_verification_status',
+            6 => 'used_for_parsing',
+        ];
+        $orderedColumns = [];
+
+        foreach ($order as $item) {
+            $index = (int) ($item['column'] ?? -1);
+            $column = $columns[$index] ?? null;
+            if ($column === null || isset($orderedColumns[$column])) {
+                continue;
+            }
+
+            $direction = ($item['dir'] ?? null) === 'desc' ? 'desc' : 'asc';
+            $query->orderBy($column, $direction);
+            $orderedColumns[$column] = true;
+        }
+
+        foreach ([
+            'category_sort_order',
+            'category_name',
+            'taxonomy_level_sort',
+            'link_sort_order',
+            'occupation_name',
+            'specialization_name',
+            'service_name',
+            'target_catalog_id',
+            'category_id',
+        ] as $column) {
+            if (! isset($orderedColumns[$column])) {
+                $query->orderBy($column);
+            }
+        }
+    }
+
+    /**
+     * Сформировать безопасное представление внутренней группы мастеров.
+     */
+    private function groupColumn(object $row): string
+    {
+        return sprintf(
+            '<strong>%s</strong><div><code>%s</code></div>',
+            e((string) $row->category_name),
+            e((string) $row->category_key),
+        );
+    }
+
+    /**
+     * Сформировать безопасное представление одного уровня каталога.
+     */
+    private function nodeColumn(object $row, string $prefix, string $externalIdLabel): string
+    {
+        $name = $row->{$prefix.'_name'};
+        if (! is_string($name) || $name === '') {
+            return '<span class="text-muted">—</span>';
+        }
+
+        $html = '<div>'.e($name).'</div>';
+        $externalId = $row->{$prefix.'_external_id_raw'};
+        if (is_string($externalId) && $externalId !== '') {
+            $html .= sprintf(
+                '<small class="d-block text-muted">%s: <code>%s</code></small>',
+                e($externalIdLabel),
+                e($externalId),
+            );
+        }
+
+        $numberId = $row->{$prefix.'_external_number_id'};
+        if (is_int($numberId) || (is_string($numberId) && ctype_digit($numberId))) {
+            $html .= '<small class="text-muted">№ '.e((string) $numberId).'</small>';
+        }
+
+        return $html;
+    }
+
+    /**
+     * Показать slug и только предварительно проверенную ссылку на Яндекс Услуги.
+     */
+    private function slugUrlColumn(object $row): string
+    {
+        $slug = trim((string) $row->target_slug);
+        $html = $slug === ''
+            ? '<span class="text-muted">slug не указан</span>'
+            : '<code class="catalog-slug">'.e($slug).'</code>';
+        $safeUrl = YandexCatalog::safeSourceUrl($row->target_source_url);
+
+        if ($safeUrl !== null) {
+            $html .= sprintf(
+                '<div class="mt-1"><a href="%s" target="_blank" rel="noopener noreferrer nofollow">Открыть на uslugi.yandex.ru <i class="fas fa-external-link-alt ml-1" aria-hidden="true"></i></a></div>',
+                e($safeUrl),
+            );
+        }
+
+        return $html;
+    }
+
+    /**
+     * Преобразовать технические значения статуса и уровня в фиксированные подписи.
+     */
+    private function statusColumn(object $row): string
+    {
+        $status = (string) $row->target_verification_status;
+        $statusLabel = self::STATUS_LABELS[$status] ?? 'Неизвестный статус';
+        $statusBadge = self::STATUS_BADGES[$status] ?? 'secondary';
+        $levelLabel = YandexCatalog::LEVEL_LABELS[(string) $row->taxonomy_level] ?? 'Неизвестный уровень';
+
+        return sprintf(
+            '<span class="badge badge-%s">%s</span><small class="d-block text-muted mt-1">%s</small>',
+            $statusBadge,
+            e($statusLabel),
+            e($levelLabel),
+        );
+    }
+
+    /**
+     * Сформировать индикатор и форму включения строки в план парсинга.
+     */
+    private function parsingColumn(object $row): string
+    {
+        $isActive = (bool) $row->used_for_parsing;
+        $html = $isActive
+            ? '<span class="badge badge-success mb-2"><i class="fas fa-check mr-1" aria-hidden="true"></i>В парсинге</span>'
+            : '<span class="badge badge-light border mb-2">Не участвует</span>';
+
+        if (! $this->canToggleParsing($row)) {
+            return $html.'<small class="d-block text-muted">Недоступно: статус, slug, URL или ID не подтверждены</small>';
+        }
+
+        $action = route('admin.catalog.parsing', [
+            'category' => (int) $row->category_id,
+            'taxonomyLevel' => (string) $row->taxonomy_level,
+            'catalogNode' => (int) $row->target_catalog_id,
+        ]);
+        $buttonClass = $isActive ? 'btn-outline-danger' : 'btn-outline-success';
+        $buttonLabel = $isActive ? 'Исключить' : 'Включить';
+
+        return $html.sprintf(
+            '<form method="post" action="%s"><input type="hidden" name="_token" value="%s"><input type="hidden" name="_method" value="PATCH"><input type="hidden" name="is_active" value="%s"><button type="submit" class="btn btn-sm %s">%s</button></form>',
+            e($action),
+            e(csrf_token()),
+            $isActive ? '0' : '1',
+            $buttonClass,
+            $buttonLabel,
+        );
+    }
+
+    /**
+     * Проверить, что строка содержит согласованные данные для управления парсингом.
+     */
+    private function canToggleParsing(object $row): bool
+    {
+        $numberId = $row->target_external_number_id;
+        if (is_string($numberId) && ctype_digit($numberId)) {
+            $numberId = (int) $numberId;
+        }
+
+        $urlPath = YandexCatalog::crawlPath(
+            YandexCatalog::safeSourceUrl($row->target_source_url),
+            $numberId,
+        );
+        $catalogPath = YandexCatalog::catalogPath($row->target_slug, $numberId);
+
+        return $urlPath !== null
+            && $catalogPath !== null
+            && hash_equals($catalogPath, $urlPath)
+            && in_array(
+                $row->target_verification_status,
+                YandexCatalog::USABLE_STATUSES,
+                true,
+            );
+    }
+
+    /**
+     * Сформировать безопасные ссылки и форму удаления для CRUD каталога.
+     */
+    private function actionsColumn(object $row): string
+    {
+        $parameters = [
+            'category' => (int) $row->category_id,
+            'taxonomyLevel' => (string) $row->taxonomy_level,
+            'catalogNode' => (int) $row->target_catalog_id,
+        ];
+        $editUrl = route('admin.catalog.edit', $parameters);
+        $deleteUrl = route('admin.catalog.destroy', $parameters);
+        $catalogNode = (int) $row->target_catalog_id;
+
+        return sprintf(
+            '<a href="%s" class="btn btn-sm btn-primary" aria-label="Редактировать %d"><i class="fas fa-edit" aria-hidden="true"></i><span class="sr-only">Редактировать</span></a> <form method="post" class="d-inline" action="%s" onsubmit="return confirm(\'Удалить категорию из выбранной группы? Цель парсинга будет отключена, а справочный узел сохранится для истории.\');"><input type="hidden" name="_token" value="%s"><input type="hidden" name="_method" value="DELETE"><input type="hidden" name="confirmed" value="1"><button type="submit" class="btn btn-sm btn-danger" aria-label="Удалить %d"><i class="fas fa-trash" aria-hidden="true"></i><span class="sr-only">Удалить</span></button></form>',
+            e($editUrl),
+            $catalogNode,
+            e($deleteUrl),
+            e(csrf_token()),
+            $catalogNode,
+        );
     }
 
     /**

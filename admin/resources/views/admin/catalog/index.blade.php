@@ -3,13 +3,32 @@
 @section('title', $title)
 
 @section('css')
+    <link rel="stylesheet" href="{{ asset('plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
     <style>
-        .catalog-node { min-width: 190px; }
-        .catalog-node code, .catalog-slug { overflow-wrap: anywhere; white-space: normal; }
-        .catalog-group { min-width: 155px; }
-        .catalog-status { min-width: 135px; }
-        .catalog-parsing { min-width: 170px; }
-        .catalog-actions { min-width: 105px; }
+        #yandex-catalog td { vertical-align: top; }
+        #yandex-catalog td.catalog-node { min-width: 190px; }
+        #yandex-catalog td.catalog-node code,
+        #yandex-catalog td.catalog-slug { overflow-wrap: anywhere; white-space: normal; }
+        #yandex-catalog td.catalog-group { min-width: 155px; }
+        #yandex-catalog td.catalog-status { min-width: 135px; }
+        #yandex-catalog td.catalog-parsing { min-width: 170px; }
+        #yandex-catalog td.catalog-actions { min-width: 105px; }
+
+        .catalog-filter-actions {
+            display: flex;
+            gap: .5rem;
+            justify-content: flex-end;
+        }
+
+        .catalog-filter-actions .btn { min-width: 120px; }
+
+        @media (max-width: 575.98px) {
+            .catalog-filter-actions .btn {
+                flex: 1 1 0;
+                min-width: 0;
+            }
+        }
     </style>
 @endsection
 
@@ -26,20 +45,29 @@
 
             <div class="card card-outline card-info">
                 <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-filter mr-1" aria-hidden="true"></i>
+                    <h2 class="card-title font-weight-bold">
+                        <i class="fas fa-filter mr-2" aria-hidden="true"></i>
                         Фильтры
                     </h2>
+                    <div class="card-tools">
+                        <button
+                            type="button"
+                            class="btn btn-tool"
+                            data-card-widget="collapse"
+                            aria-label="Свернуть фильтры"
+                        >
+                            <i class="fas fa-minus" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <form method="get" action="{{ route('admin.catalog.index') }}">
+                    <form id="catalog-filters" autocomplete="off">
                         <div class="form-row align-items-end">
                             <div class="form-group col-xl-3 col-md-6">
                                 <label class="filter-label" for="catalog-q">Поиск</label>
                                 <input
                                     id="catalog-q"
                                     type="search"
-                                    name="q"
                                     value="{{ $filters['q'] ?? '' }}"
                                     class="form-control"
                                     maxlength="200"
@@ -48,7 +76,7 @@
                             </div>
                             <div class="form-group col-xl-3 col-md-6">
                                 <label class="filter-label" for="catalog-group">Группа мастеров</label>
-                                <select id="catalog-group" name="group" class="custom-select">
+                                <select id="catalog-group" class="custom-select">
                                     <option value="">Все группы</option>
                                     @foreach ($groups as $group)
                                         <option
@@ -62,7 +90,7 @@
                             </div>
                             <div class="form-group col-xl-2 col-md-4">
                                 <label class="filter-label" for="catalog-status">Статус проверки</label>
-                                <select id="catalog-status" name="status" class="custom-select">
+                                <select id="catalog-status" class="custom-select">
                                     <option value="">Все статусы</option>
                                     @foreach ($statusOptions as $value => $label)
                                         <option value="{{ $value }}" @selected(($filters['status'] ?? '') === $value)>
@@ -73,7 +101,7 @@
                             </div>
                             <div class="form-group col-xl-2 col-md-4">
                                 <label class="filter-label" for="catalog-has-id">Внешний ID</label>
-                                <select id="catalog-has-id" name="has_id" class="custom-select">
+                                <select id="catalog-has-id" class="custom-select">
                                     <option value="">Неважно</option>
                                     <option value="1" @selected(($filters['has_id'] ?? '') === '1')>Есть</option>
                                     <option value="0" @selected(($filters['has_id'] ?? '') === '0')>Нет</option>
@@ -81,20 +109,20 @@
                             </div>
                             <div class="form-group col-xl-2 col-md-4">
                                 <label class="filter-label" for="catalog-used">Участие в парсинге</label>
-                                <select id="catalog-used" name="used_for_parsing" class="custom-select">
+                                <select id="catalog-used" class="custom-select">
                                     <option value="">Неважно</option>
                                     <option value="1" @selected(($filters['used_for_parsing'] ?? '') === '1')>Участвует</option>
                                     <option value="0" @selected(($filters['used_for_parsing'] ?? '') === '0')>Не участвует</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="d-flex flex-wrap justify-content-end">
-                            <a href="{{ route('admin.catalog.index') }}" class="btn btn-outline-secondary mr-2">
-                                Сбросить
-                            </a>
+                        <div class="catalog-filter-actions">
                             <button type="submit" class="btn btn-info">
                                 <i class="fas fa-search mr-1" aria-hidden="true"></i>
                                 Применить
+                            </button>
+                            <button id="reset-catalog-filters" type="button" class="btn btn-outline-secondary">
+                                Сбросить
                             </button>
                         </div>
                     </form>
@@ -102,16 +130,18 @@
             </div>
 
             <div class="card">
-                <div class="card-header d-flex flex-wrap align-items-center justify-content-between">
-                    <span>Найдено строк: <strong>{{ $rows->total() }}</strong></span>
+                <div class="card-header d-flex flex-wrap align-items-center justify-content-end">
                     <a href="{{ route('admin.catalog.create') }}" class="btn btn-primary btn-sm">
                         <i class="fas fa-plus mr-1" aria-hidden="true"></i>
                         Добавить категорию
                     </a>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body">
+                    <div id="catalog-table-error" class="alert alert-danger d-none" role="alert">
+                        Не удалось загрузить Яндекс.Каталог. Проверьте соединение с БД парсера.
+                    </div>
                     <div class="table-responsive">
-                        <table class="table table-bordered table-striped table-hover mb-0">
+                        <table id="yandex-catalog" class="table table-bordered table-striped table-hover w-100">
                             <caption class="sr-only">
                                 Нормализованный каталог направлений, специализаций и услуг Яндекса
                             </caption>
@@ -127,182 +157,104 @@
                                 <th scope="col">Действия</th>
                             </tr>
                             </thead>
-                            <tbody>
-                            @forelse ($rows as $row)
-                                <tr>
-                                    <td class="catalog-group">
-                                        <strong>{{ $row->category_name }}</strong>
-                                        <div><code>{{ $row->category_key }}</code></div>
-                                    </td>
-                                    <td class="catalog-node">
-                                        @if ($row->occupation_name)
-                                            <div>{{ $row->occupation_name }}</div>
-                                            @if ($row->occupation_external_id_raw)
-                                                <small class="d-block text-muted">
-                                                    occupationId: <code>{{ $row->occupation_external_id_raw }}</code>
-                                                </small>
-                                            @endif
-                                            @if ($row->occupation_external_number_id)
-                                                <small class="text-muted">№ {{ $row->occupation_external_number_id }}</small>
-                                            @endif
-                                        @else
-                                            <span class="text-muted">—</span>
-                                        @endif
-                                    </td>
-                                    <td class="catalog-node">
-                                        @if ($row->specialization_name)
-                                            <div>{{ $row->specialization_name }}</div>
-                                            @if ($row->specialization_external_id_raw)
-                                                <small class="d-block text-muted">
-                                                    specId: <code>{{ $row->specialization_external_id_raw }}</code>
-                                                </small>
-                                            @endif
-                                            @if ($row->specialization_external_number_id)
-                                                <small class="text-muted">№ {{ $row->specialization_external_number_id }}</small>
-                                            @endif
-                                        @else
-                                            <span class="text-muted">—</span>
-                                        @endif
-                                    </td>
-                                    <td class="catalog-node">
-                                        @if ($row->service_name)
-                                            <div>{{ $row->service_name }}</div>
-                                            @if ($row->service_external_id_raw)
-                                                <small class="d-block text-muted">
-                                                    serviceId: <code>{{ $row->service_external_id_raw }}</code>
-                                                </small>
-                                            @endif
-                                            @if ($row->service_external_number_id)
-                                                <small class="text-muted">№ {{ $row->service_external_number_id }}</small>
-                                            @endif
-                                        @else
-                                            <span class="text-muted">—</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if ($row->target_slug)
-                                            <code class="catalog-slug">{{ $row->target_slug }}</code>
-                                        @else
-                                            <span class="text-muted">slug не указан</span>
-                                        @endif
-                                        @if ($row->safe_source_url)
-                                            <div class="mt-1">
-                                                <a
-                                                    href="{{ $row->safe_source_url }}"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer nofollow"
-                                                >
-                                                    Открыть на uslugi.yandex.ru
-                                                    <i class="fas fa-external-link-alt ml-1" aria-hidden="true"></i>
-                                                </a>
-                                            </div>
-                                        @endif
-                                    </td>
-                                    <td class="catalog-status">
-                                        <span class="badge badge-{{ $row->status_badge }}">
-                                            {{ $row->status_label }}
-                                        </span>
-                                        <small class="d-block text-muted mt-1">
-                                            @switch($row->taxonomy_level)
-                                                @case('occupation') Направление @break
-                                                @case('specialization') Специализация @break
-                                                @case('service') Услуга @break
-                                            @endswitch
-                                        </small>
-                                    </td>
-                                    <td class="catalog-parsing">
-                                        @if ($row->used_for_parsing)
-                                            <span class="badge badge-success mb-2">
-                                                <i class="fas fa-check mr-1" aria-hidden="true"></i>
-                                                В парсинге
-                                            </span>
-                                        @else
-                                            <span class="badge badge-light border mb-2">Не участвует</span>
-                                        @endif
-
-                                        @if ($row->can_toggle_parsing)
-                                            <form
-                                                method="post"
-                                                action="{{ route('admin.catalog.parsing', [
-                                                    'category' => $row->category_id,
-                                                    'taxonomyLevel' => $row->taxonomy_level,
-                                                    'catalogNode' => $row->target_catalog_id,
-                                                ]) }}"
-                                            >
-                                                @csrf
-                                                @method('PATCH')
-                                                <input
-                                                    type="hidden"
-                                                    name="is_active"
-                                                    value="{{ $row->used_for_parsing ? '0' : '1' }}"
-                                                >
-                                                <button
-                                                    type="submit"
-                                                    class="btn btn-sm {{ $row->used_for_parsing ? 'btn-outline-danger' : 'btn-outline-success' }}"
-                                                >
-                                                    {{ $row->used_for_parsing ? 'Исключить' : 'Включить' }}
-                                                </button>
-                                            </form>
-                                        @else
-                                            <small class="d-block text-muted">
-                                                Недоступно: статус, slug, URL или ID не подтверждены
-                                            </small>
-                                        @endif
-                                    </td>
-                                    <td class="catalog-actions text-nowrap">
-                                        <a
-                                            href="{{ route('admin.catalog.edit', [
-                                                'category' => $row->category_id,
-                                                'taxonomyLevel' => $row->taxonomy_level,
-                                                'catalogNode' => $row->target_catalog_id,
-                                            ]) }}"
-                                            class="btn btn-sm btn-primary"
-                                            aria-label="Редактировать {{ $row->target_catalog_id }}"
-                                        >
-                                            <i class="fas fa-edit" aria-hidden="true"></i>
-                                            <span class="sr-only">Редактировать</span>
-                                        </a>
-                                        <form
-                                            method="post"
-                                            class="d-inline"
-                                            action="{{ route('admin.catalog.destroy', [
-                                                'category' => $row->category_id,
-                                                'taxonomyLevel' => $row->taxonomy_level,
-                                                'catalogNode' => $row->target_catalog_id,
-                                            ]) }}"
-                                            onsubmit="return confirm('Удалить категорию из выбранной группы? Цель парсинга будет отключена, а справочный узел сохранится для истории.');"
-                                        >
-                                            @csrf
-                                            @method('DELETE')
-                                            <input type="hidden" name="confirmed" value="1">
-                                            <button
-                                                type="submit"
-                                                class="btn btn-sm btn-danger"
-                                                aria-label="Удалить {{ $row->target_catalog_id }}"
-                                            >
-                                                <i class="fas fa-trash" aria-hidden="true"></i>
-                                                <span class="sr-only">Удалить</span>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="8" class="text-center py-4">
-                                        По заданным фильтрам записи не найдены.
-                                    </td>
-                                </tr>
-                            @endforelse
-                            </tbody>
                         </table>
                     </div>
                 </div>
-                @if ($rows->hasPages())
-                    <div class="card-footer clearfix">
-                        {{ $rows->onEachSide(1)->links('pagination::bootstrap-4') }}
-                    </div>
-                @endif
             </div>
         </div>
     </section>
+@endsection
+
+@section('js')
+    <script src="{{ asset('plugins/datatables/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ asset('plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
+    <script src="{{ asset('plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
+    <script src="{{ asset('plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
+    <script>
+        $(function () {
+            const catalog = $('#yandex-catalog');
+
+            function filterValues() {
+                return {
+                    q: $('#catalog-q').val().trim(),
+                    group: $('#catalog-group').val() || '',
+                    status: $('#catalog-status').val() || '',
+                    has_id: $('#catalog-has-id').val() || '',
+                    used_for_parsing: $('#catalog-used').val() || ''
+                };
+            }
+
+            catalog.on('preXhr.dt', function () {
+                $('#catalog-table-error').addClass('d-none');
+            });
+
+            catalog.on('xhr.dt', function (event, settings, json) {
+                if (json) {
+                    $('#catalog-table-error').addClass('d-none');
+                }
+            });
+
+            const table = catalog.DataTable({
+                processing: true,
+                serverSide: true,
+                searching: false,
+                responsive: true,
+                autoWidth: false,
+                pageLength: 25,
+                lengthMenu: [25, 50, 100],
+                order: [[0, 'asc']],
+                ajax: {
+                    url: @json(route('admin.datatable.catalog')),
+                    data: function (data) {
+                        Object.assign(data, filterValues());
+                    },
+                    error: function () {
+                        $('#catalog-table-error').removeClass('d-none');
+                    }
+                },
+                language: {
+                    processing: 'Загрузка…',
+                    lengthMenu: 'Показывать по _MENU_',
+                    info: 'Записи _START_–_END_ из _TOTAL_',
+                    infoEmpty: 'Нет записей',
+                    infoFiltered: '(из _MAX_)',
+                    zeroRecords: 'Ничего не найдено',
+                    emptyTable: 'Категории пока не добавлены',
+                    paginate: {
+                        first: 'Первая',
+                        last: 'Последняя',
+                        next: 'Следующая',
+                        previous: 'Предыдущая'
+                    }
+                },
+                columns: [
+                    {data: 'group', name: 'category_name', className: 'catalog-group', searchable: false},
+                    {data: 'occupation', name: 'occupation_name', className: 'catalog-node', searchable: false},
+                    {data: 'specialization', name: 'specialization_name', className: 'catalog-node', searchable: false},
+                    {data: 'service', name: 'service_name', className: 'catalog-node', searchable: false},
+                    {data: 'slug_url', name: 'target_slug', className: 'catalog-slug', searchable: false},
+                    {data: 'status', name: 'target_verification_status', className: 'catalog-status', searchable: false},
+                    {data: 'parsing', name: 'used_for_parsing', className: 'catalog-parsing', searchable: false},
+                    {
+                        data: 'actions',
+                        className: 'catalog-actions text-nowrap',
+                        orderable: false,
+                        searchable: false
+                    }
+                ]
+            });
+
+            $('#catalog-filters').on('submit', function (event) {
+                event.preventDefault();
+                $('#catalog-table-error').addClass('d-none');
+                table.draw();
+            });
+
+            $('#reset-catalog-filters').on('click', function () {
+                $('#catalog-q, #catalog-group, #catalog-status, #catalog-has-id, #catalog-used').val('');
+                $('#catalog-table-error').addClass('d-none');
+                table.draw();
+            });
+        });
+    </script>
 @endsection

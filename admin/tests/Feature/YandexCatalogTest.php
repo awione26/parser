@@ -29,9 +29,14 @@ class YandexCatalogTest extends TestCase
 
         $this->get(route('admin.catalog.index'))
             ->assertRedirect(route('login'));
+        $this->getJson(route('admin.datatable.catalog', $this->dataTableParameters()))
+            ->assertUnauthorized();
 
         $this->actingAs($viewer)
             ->get(route('admin.catalog.index'))
+            ->assertForbidden();
+        $this->actingAs($viewer)
+            ->getJson(route('admin.datatable.catalog', $this->dataTableParameters()))
             ->assertForbidden();
 
         $this->actingAs($viewer)
@@ -43,7 +48,7 @@ class YandexCatalogTest extends TestCase
             ->get(route('admin.catalog.index'))
             ->assertOk()
             ->assertSee('Яндекс.Каталог')
-            ->assertSee('Найдено строк:');
+            ->assertSee('yandex-catalog');
     }
 
     public function test_catalog_renders_hierarchy_escapes_data_and_allows_only_canonical_urls(): void
@@ -51,22 +56,29 @@ class YandexCatalogTest extends TestCase
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
         $ids = $this->seedHierarchy();
 
-        $response = $this->actingAs($admin)
+        $page = $this->actingAs($admin)
             ->get(route('admin.catalog.index'))
+            ->assertOk();
+        $response = $this->actingAs($admin)
+            ->getJson(route('admin.datatable.catalog', $this->dataTableParameters()))
             ->assertOk()
-            ->assertSee('Найдено строк: <strong>3</strong>', false)
-            ->assertSee('Сантехники')
-            ->assertSee('Сантехнические работы')
-            ->assertSee('&lt;script&gt;Монтаж смесителя&lt;/script&gt;', false)
-            ->assertDontSee('<script>Монтаж смесителя</script>', false)
-            ->assertSee('https://uslugi.yandex.ru/category/remont/santehnika--101', false)
-            ->assertSee('https://uslugi.yandex.ru/213-moscow/category/remont/smesitel--303', false)
-            ->assertSee('rel="noopener noreferrer nofollow"', false)
-            ->assertDontSee('javascript:alert(1)', false)
-            ->assertSee('В парсинге');
+            ->assertJsonPath('recordsTotal', 3)
+            ->assertJsonPath('recordsFiltered', 3)
+            ->assertJsonCount(3, 'data');
 
-        $this->assertSame(3, $response->viewData('rows')->total());
-        $this->assertSame($ids['category'], $response->viewData('groups')->first()->id);
+        $content = collect($response->json('data'))
+            ->flatMap(static fn (array $row): array => array_values($row))
+            ->implode('');
+        $this->assertStringContainsString('Сантехники', $content);
+        $this->assertStringContainsString('Сантехнические работы', $content);
+        $this->assertStringContainsString('&lt;script&gt;Монтаж смесителя&lt;/script&gt;', $content);
+        $this->assertStringNotContainsString('<script>Монтаж смесителя</script>', $content);
+        $this->assertStringContainsString('https://uslugi.yandex.ru/category/remont/santehnika--101', $content);
+        $this->assertStringContainsString('https://uslugi.yandex.ru/213-moscow/category/remont/smesitel--303', $content);
+        $this->assertStringContainsString('rel="noopener noreferrer nofollow"', $content);
+        $this->assertStringNotContainsString('javascript:alert(1)', $content);
+        $this->assertStringContainsString('В парсинге', $content);
+        $this->assertSame($ids['category'], $page->viewData('groups')->first()->id);
     }
 
     public function test_server_side_filters_and_fixed_pagination_are_applied(): void
@@ -75,25 +87,34 @@ class YandexCatalogTest extends TestCase
         $ids = $this->seedHierarchy();
 
         $filtered = $this->actingAs($admin)
-            ->get(route('admin.catalog.index', [
+            ->getJson(route('admin.datatable.catalog', [
+                ...$this->dataTableParameters(),
                 'group' => (string) $ids['category'],
                 'status' => 'confirmed',
                 'has_id' => '1',
                 'used_for_parsing' => '1',
             ]))
             ->assertOk()
-            ->assertSee('&lt;script&gt;Монтаж смесителя&lt;/script&gt;', false);
+            ->assertJsonPath('recordsTotal', 1)
+            ->assertJsonCount(1, 'data');
+        $this->assertStringContainsString(
+            '&lt;script&gt;Монтаж смесителя&lt;/script&gt;',
+            (string) $filtered->json('data.0.service'),
+        );
 
-        $this->assertSame(1, $filtered->viewData('rows')->total());
-
-        $this->actingAs($admin)
-            ->get(route('admin.catalog.index', [
+        $byRubricId = $this->actingAs($admin)
+            ->getJson(route('admin.datatable.catalog', [
+                ...$this->dataTableParameters(),
                 'q' => '101',
                 'used_for_parsing' => '0',
             ]))
             ->assertOk()
-            ->assertSee('Сантехники')
-            ->assertDontSee('&lt;script&gt;Монтаж смесителя&lt;/script&gt;', false);
+            ->assertJsonPath('recordsTotal', 1);
+        $this->assertStringContainsString('Сантехники', (string) $byRubricId->json('data.0.group'));
+        $this->assertStringNotContainsString(
+            '&lt;script&gt;Монтаж смесителя&lt;/script&gt;',
+            (string) $byRubricId->json('data.0.service'),
+        );
 
         $categoryId = $this->insertCategory('pagination', 'Пагинация');
         for ($number = 1; $number <= 51; $number++) {
@@ -111,13 +132,24 @@ class YandexCatalogTest extends TestCase
         }
 
         $page = $this->actingAs($admin)
-            ->get(route('admin.catalog.index', ['group' => $categoryId]))
+            ->getJson(route('admin.datatable.catalog', [
+                ...$this->dataTableParameters(),
+                'group' => $categoryId,
+            ]))
             ->assertOk()
-            ->viewData('rows');
+            ->assertJsonPath('recordsTotal', 51)
+            ->assertJsonPath('recordsFiltered', 51)
+            ->assertJsonCount(25, 'data');
 
-        $this->assertSame(50, $page->count());
-        $this->assertSame(51, $page->total());
-        $this->assertSame(2, $page->lastPage());
+        $this->actingAs($admin)
+            ->getJson(route('admin.datatable.catalog', [
+                ...$this->dataTableParameters(),
+                'start' => 50,
+                'group' => $categoryId,
+            ]))
+            ->assertOk()
+            ->assertJsonPath('recordsTotal', 51)
+            ->assertJsonCount(1, 'data');
     }
 
     public function test_invalid_catalog_filters_are_rejected(): void
@@ -125,7 +157,8 @@ class YandexCatalogTest extends TestCase
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
         $this->actingAs($admin)
-            ->getJson(route('admin.catalog.index', [
+            ->getJson(route('admin.datatable.catalog', [
+                ...$this->dataTableParameters(),
                 'q' => "bad\x00query",
                 'group' => '999999',
                 'status' => 'verified',
@@ -139,6 +172,29 @@ class YandexCatalogTest extends TestCase
                 'status',
                 'has_id',
                 'used_for_parsing',
+            ]);
+    }
+
+    public function test_invalid_datatable_pagination_and_column_contract_are_rejected(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+        $parameters = $this->dataTableParameters();
+        $parameters['start'] = -1;
+        $parameters['length'] = -1;
+        $parameters['columns'][0]['name'] = 'target_source_url';
+        $parameters['columns'][1]['searchable'] = 'true';
+        $parameters['columns'][1]['search']['value'] = 'forged search';
+        $parameters['order'][0]['column'] = 7;
+
+        $this->actingAs($admin)
+            ->getJson(route('admin.datatable.catalog', $parameters))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'start',
+                'length',
+                'columns.0.name',
+                'columns.1.searchable',
+                'order.0.column',
             ]);
     }
 
@@ -449,6 +505,43 @@ class YandexCatalogTest extends TestCase
             'created_at' => '2026-09-01 10:00:00',
             'updated_at' => '2026-09-01 10:00:00',
         ], $values));
+    }
+
+    /**
+     * Сформировать параметры запроса, которые отправляет таблица каталога.
+     *
+     * @return array<string, mixed>
+     */
+    private function dataTableParameters(): array
+    {
+        $columns = [
+            ['data' => 'group', 'name' => 'category_name'],
+            ['data' => 'occupation', 'name' => 'occupation_name'],
+            ['data' => 'specialization', 'name' => 'specialization_name'],
+            ['data' => 'service', 'name' => 'service_name'],
+            ['data' => 'slug_url', 'name' => 'target_slug'],
+            ['data' => 'status', 'name' => 'target_verification_status'],
+            ['data' => 'parsing', 'name' => 'used_for_parsing'],
+            ['data' => 'actions', 'name' => ''],
+        ];
+
+        return [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'order' => [['column' => 0, 'dir' => 'asc']],
+            'columns' => array_map(
+                static fn (array $column, int $index): array => [
+                    ...$column,
+                    'searchable' => 'false',
+                    'orderable' => $index === 7 ? 'false' : 'true',
+                    'search' => ['value' => '', 'regex' => 'false'],
+                ],
+                $columns,
+                array_keys($columns),
+            ),
+            'search' => ['value' => '', 'regex' => 'false'],
+        ];
     }
 
     /**
