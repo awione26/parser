@@ -5,7 +5,9 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+from dataclasses import replace
 from pathlib import Path
+from random import Random, SystemRandom
 from typing import Any
 
 from uslugi_parser.application import (
@@ -16,6 +18,7 @@ from uslugi_parser.application import (
     save_profile,
 )
 from uslugi_parser.catalog import CategoryDefinition
+from uslugi_parser.cli.progress import ConsoleCrawlProgress
 from uslugi_parser.config import Settings
 from uslugi_parser.infrastructure.browser.phone_collector import PhoneCollector
 from uslugi_parser.infrastructure.database.connection import make_engine, make_session_factory
@@ -51,6 +54,39 @@ def _category_repository(settings: Settings) -> ParserCategoryRepository:
 
     engine = make_engine(settings.database_url)
     return ParserCategoryRepository(make_session_factory(engine))
+
+
+def _randomize_crawl_categories(
+    categories: list[CategoryDefinition],
+    *,
+    randomizer: Random | None = None,
+) -> list[CategoryDefinition]:
+    """Перемешать группы и их рубрики, сохранив связь пути с уровнем каталога.
+
+    Новый список создаётся перед каждым массовым обходом. Исходный снимок из БД
+    не изменяется, поэтому его можно безопасно использовать в других сценариях.
+    """
+
+    generator = randomizer or SystemRandom()
+    shuffled_categories = list(categories)
+    generator.shuffle(shuffled_categories)
+
+    result: list[CategoryDefinition] = []
+    for category in shuffled_categories:
+        targets = list(category.targets())
+        generator.shuffle(targets)
+        result.append(
+            replace(
+                category,
+                seed_paths=tuple(path for path, _level in targets),
+                taxonomy_levels=(
+                    tuple(level for _path, level in targets if level is not None)
+                    if category.taxonomy_levels
+                    else ()
+                ),
+            )
+        )
+    return result
 
 
 def _resolve_save_category(
@@ -178,6 +214,20 @@ def _build_parser() -> argparse.ArgumentParser:
         help="use only when written operator permission explicitly allows it",
     )
     robots_group.set_defaults(respect_robots=None)
+    progress_group = crawl_parser.add_mutually_exclusive_group()
+    progress_group.add_argument(
+        "--progress",
+        dest="progress",
+        action="store_true",
+        help="force the detailed progress bar even when stderr is not a TTY",
+    )
+    progress_group.add_argument(
+        "--no-progress",
+        dest="progress",
+        action="store_false",
+        help="disable the detailed progress bar",
+    )
+    progress_group.set_defaults(progress=None)
     return parser
 
 
@@ -257,15 +307,17 @@ async def _run_crawl(args: argparse.Namespace, settings: Settings) -> int:
         settings = settings.with_overrides(**changes)
     if not settings.respect_robots:
         logger.warning("robots_policy_override_enabled")
-    categories = _category_repository(settings).resolve(args.category)
+    categories = _randomize_crawl_categories(_category_repository(settings).resolve(args.category))
     repository = None if args.dry_run else _repository(settings)
-    stats = await crawl(
-        settings=settings,
-        categories=categories,
-        max_pages=args.max_pages,
-        max_profiles=args.max_profiles,
-        repository=repository,
-        fetcher_factory=_fetcher,
-    )
+    with ConsoleCrawlProgress(force=getattr(args, "progress", None)) as progress:
+        stats = await crawl(
+            settings=settings,
+            categories=categories,
+            max_pages=args.max_pages,
+            max_profiles=args.max_profiles,
+            repository=repository,
+            fetcher_factory=_fetcher,
+            progress=progress,
+        )
     _json_dump(stats.public_dict())
     return 0

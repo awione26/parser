@@ -3,6 +3,9 @@
 from uslugi_parser.application.crawl_service import crawl
 from uslugi_parser.application.dto import (
     CrawlOptions,
+    CrawlProgressEvent,
+    CrawlProgressReporter,
+    CrawlProgressStage,
     FetcherFactory,
     FetcherPort,
     ParserCategoryReader,
@@ -26,6 +29,9 @@ from uslugi_parser.application.profile_service import (
 
 __all__ = [
     "CrawlOptions",
+    "CrawlProgressEvent",
+    "CrawlProgressReporter",
+    "CrawlProgressStage",
     "FetcherFactory",
     "FetcherPort",
     "ERROR_REASON_MAX_LENGTH",

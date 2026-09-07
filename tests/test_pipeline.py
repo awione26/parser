@@ -5,7 +5,7 @@ from copy import deepcopy
 import pytest
 from conftest import html_with_state, make_state, make_worker
 
-from uslugi_parser.application import crawl, parse_live_profile
+from uslugi_parser.application import CrawlProgressEvent, crawl, parse_live_profile
 from uslugi_parser.catalog.categories import DEFAULT_CATEGORIES, CategoryDefinition
 from uslugi_parser.config import Settings
 from uslugi_parser.exceptions import CaptchaDetected, CrawlAborted
@@ -32,6 +32,7 @@ def live_settings() -> Settings:
 class FakeFetcher:
     def __init__(self, *results: FetchResult) -> None:
         self.results = list(results)
+        self.urls: list[str] = []
 
     async def __aenter__(self) -> FakeFetcher:
         return self
@@ -39,7 +40,8 @@ class FakeFetcher:
     async def __aexit__(self, *_: object) -> None:
         return None
 
-    async def get(self, _url: str) -> FetchResult:
+    async def get(self, url: str) -> FetchResult:
+        self.urls.append(url)
         return self.results.pop(0)
 
 
@@ -176,3 +178,118 @@ async def test_catalog_crawl_never_extracts_public_phone() -> None:
     assert len(stats.profiles) == 1
     assert stats.profiles[0]["phone"] is None
     assert stats.profiles[0]["phone_status"] == "not_requested"
+
+
+@pytest.mark.asyncio
+async def test_crawl_reports_detailed_progress_snapshots() -> None:
+    """Передавать CLI этапы целей, страниц и профилей вместе со счётчиками."""
+
+    worker = make_worker()
+    second_worker = make_worker(
+        worker_id="worker-2",
+        seoid="654321",
+        seoname="SecondMaster-654321",
+    )
+    category = CategoryDefinition(
+        key="plumbers_progress",
+        name="Сантехник",
+        seed_paths=("remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie--1844",),
+        taxonomy_levels=("specialization",),
+    )
+    fake = FakeFetcher(
+        result(
+            html_with_state(make_state(worker, second_worker)),
+            "https://uslugi.yandex.ru/category",
+        ),
+        result(
+            html_with_state(make_state(worker)),
+            "https://uslugi.yandex.ru/profile/TestMaster-123456",
+        ),
+    )
+    events: list[CrawlProgressEvent] = []
+
+    stats = await crawl(
+        settings=live_settings(),
+        categories=[category],
+        max_pages=1,
+        max_profiles=1,
+        repository=None,
+        fetcher_factory=lambda _settings: fake,
+        progress=events.append,
+    )
+
+    stages = [progress.stage for progress in events]
+    assert stages == [
+        "started",
+        "target_started",
+        "page_fetching",
+        "page_parsed",
+        "profile_started",
+        "profile_completed",
+        "page_completed",
+        "target_completed",
+        "completed",
+    ]
+    parsed_page = events[3]
+    assert parsed_page.targets_total == 1
+    assert parsed_page.target_rubric_number_id == 1844
+    assert parsed_page.page_number == 1
+    assert parsed_page.pages_total == 1
+    assert parsed_page.profiles_total == 2
+    assert events[5].outcome == "dry_run"
+    assert events[-1].outcome == "limit_reached"
+    assert events[-1].profile_index == 1
+    assert events[-1].dry_run is True
+    assert events[-1].discovered == stats.discovered == 2
+    assert events[-1].fetched == stats.fetched == 1
+    assert events[-1].parsed == stats.parsed == 1
+
+
+@pytest.mark.asyncio
+async def test_crawl_alternates_catalog_targets_between_pagination_rounds() -> None:
+    """Не заканчивать все страницы одной рубрики до перехода к следующей."""
+
+    empty_state = make_state()
+    empty_state["workers"]["items"] = {}
+    empty_state["workers"]["singleSearchResultId"] = None
+    empty_state["search"]["workerIds"] = []
+    empty_state["search"]["params"]["pagination"] = {
+        "p": 0,
+        "perPage": 1,
+        "totalItems": 2,
+    }
+    category_html = html_with_state(empty_state)
+    fake = FakeFetcher(
+        *(result(category_html, "https://uslugi.yandex.ru/category") for _ in range(4))
+    )
+    categories = [
+        CategoryDefinition(
+            key="electricians_round_robin",
+            name="Электрик",
+            seed_paths=("remont-i-stroitelstvo/elektromontazhnyie-rabotyi--2007",),
+            taxonomy_levels=("specialization",),
+        ),
+        CategoryDefinition(
+            key="plumbers_round_robin",
+            name="Сантехник",
+            seed_paths=("remont-i-stroitelstvo/santehnicheskie-rabotyi-i-otoplenie--1844",),
+            taxonomy_levels=("specialization",),
+        ),
+    ]
+    events: list[CrawlProgressEvent] = []
+
+    stats = await crawl(
+        settings=live_settings(),
+        categories=categories,
+        max_pages=0,
+        max_profiles=0,
+        repository=None,
+        fetcher_factory=lambda _settings: fake,
+        progress=events.append,
+    )
+
+    page_targets = [
+        event.target_rubric_number_id for event in events if event.stage == "page_fetching"
+    ]
+    assert page_targets == [2007, 1844, 2007, 1844]
+    assert stats.category_pages == 4

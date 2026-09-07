@@ -6,6 +6,7 @@ import json
 import logging
 from collections.abc import Callable
 from dataclasses import replace
+from random import Random
 
 import pytest
 from conftest import html_with_state, make_state, make_worker
@@ -15,7 +16,12 @@ import uslugi_parser.cli.commands as cli_commands
 import uslugi_parser.cli.main as cli_main
 from uslugi_parser.application import save_profile
 from uslugi_parser.catalog import DEFAULT_CATEGORIES
-from uslugi_parser.cli.commands import _build_parser, _run_parse_html, _run_parse_profile
+from uslugi_parser.cli.commands import (
+    _build_parser,
+    _randomize_crawl_categories,
+    _run_parse_html,
+    _run_parse_profile,
+)
 from uslugi_parser.config import Settings
 from uslugi_parser.config.settings import SCRAPER_SETTING_DEFAULTS
 from uslugi_parser.exceptions import ConfigurationError
@@ -264,6 +270,45 @@ def test_crawl_command_has_no_phone_collection_switch() -> None:
         _build_parser().parse_args(["crawl", "--collect-phone"])
 
     assert error.value.code == 2
+
+
+def test_crawl_progress_switch_is_tristate() -> None:
+    """Автоматически учитывать TTY и разрешать явное включение либо отключение шкал."""
+
+    parser = _build_parser()
+
+    assert parser.parse_args(["crawl"]).progress is None
+    assert parser.parse_args(["crawl", "--progress"]).progress is True
+    assert parser.parse_args(["crawl", "--no-progress"]).progress is False
+
+
+class ReverseRandom(Random):
+    """Детерминированно разворачивать последовательности в тесте перемешивания."""
+
+    def shuffle(self, sequence: list[object]) -> None:
+        """Развернуть полученный список вместо настоящего случайного выбора."""
+
+        sequence.reverse()
+
+
+def test_crawl_randomizes_categories_and_targets_without_changing_source() -> None:
+    """Менять порядок групп и рубрик, не рассинхронизируя уровни таксономии."""
+
+    designers = replace(
+        DEFAULT_CATEGORIES["designers"],
+        taxonomy_levels=("specialization",),
+    )
+    plumbers = replace(
+        DEFAULT_CATEGORIES["plumbers"],
+        taxonomy_levels=("occupation", "specialization"),
+    )
+    source = [designers, plumbers]
+
+    randomized = _randomize_crawl_categories(source, randomizer=ReverseRandom())
+
+    assert [category.key for category in randomized] == ["plumbers", "designers"]
+    assert randomized[0].targets() == tuple(reversed(plumbers.targets()))
+    assert source == [designers, plumbers]
 
 
 def test_cli_database_settings_override_environment(monkeypatch: pytest.MonkeyPatch) -> None:

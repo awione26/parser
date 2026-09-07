@@ -1,0 +1,20 @@
+[Unit]
+Description=Continuous Yandex Services parser worker
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/uslugi-parser
+Environment=PARSER_PROJECT_DIR=/opt/uslugi-parser
+Environment=PARSER_REPEAT_INTERVAL_SECONDS=600
+ExecStart=/opt/uslugi-parser/docker/parser/continuous-crawl.sh
+Restart=always
+RestartSec=30
+TimeoutStopSec=45
+KillMode=control-group
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
